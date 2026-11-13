@@ -1,5 +1,7 @@
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const AJAIApp());
@@ -594,6 +596,7 @@ class SmallFeature extends StatelessWidget {
   }
 }
 
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -605,27 +608,19 @@ class _ChatScreenState extends State<ChatScreen> {
   final controller = TextEditingController();
   final scrollController = ScrollController();
 
+  static const apiUrl =
+      'https://aj-ai-backend.lavsharma2910.workers.dev/chat';
+
+  bool isLoading = false;
+
   final List<Map<String, String>> messages = [
     {
       'type': 'aj',
-      'text': 'नमस्ते! 😊 मैं AJ हूँ। अभी मेरा Demo Chat Mode है।',
+      'text': 'नमस्ते! 😊 मैं AJ हूँ। अब आप मुझसे सीधे AI चैट कर सकते हैं।',
     },
   ];
 
-  void send() {
-    final value = controller.text.trim();
-    if (value.isEmpty) return;
-
-    setState(() {
-      messages.add({'type': 'user', 'text': value});
-      messages.add({
-        'type': 'aj',
-        'text':
-            'आपका संदेश मिल गया। वास्तविक AI जवाब के लिए backend जोड़ना बाकी है।',
-      });
-      controller.clear();
-    });
-
+  void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scrollController.hasClients) {
         scrollController.animateTo(
@@ -635,6 +630,59 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  Future<void> send() async {
+    final value = controller.text.trim();
+    if (value.isEmpty || isLoading) return;
+
+    controller.clear();
+    setState(() {
+      messages.add({'type': 'user', 'text': value});
+      isLoading = true;
+    });
+    scrollToBottom();
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'message': value}),
+      ).timeout(const Duration(seconds: 60));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          data is Map && data['detail'] != null
+              ? data['detail'].toString()
+              : 'Server error ${response.statusCode}',
+        );
+      }
+
+      final answer = data is Map ? data['reply'] : null;
+      if (answer == null || answer.toString().trim().isEmpty) {
+        throw Exception('AI से खाली जवाब मिला।');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        messages.add({'type': 'aj', 'text': answer.toString()});
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        messages.add({
+          'type': 'aj',
+          'text': 'अभी जवाब नहीं मिल पाया। दोबारा कोशिश करें।\n\n$e',
+        });
+      });
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+        scrollToBottom();
+      }
+    }
   }
 
   @override
@@ -662,10 +710,8 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('AJ AI', style: TextStyle(fontSize: 17)),
-                Text(
-                  'Demo Chat Mode',
-                  style: TextStyle(fontSize: 10, color: muted),
-                ),
+                Text('AI Assistant • Online',
+                    style: TextStyle(fontSize: 10, color: muted)),
               ],
             ),
           ],
@@ -677,23 +723,41 @@ class _ChatScreenState extends State<ChatScreen> {
             child: ListView.builder(
               controller: scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
+              itemCount: messages.length + (isLoading ? 1 : 0),
               itemBuilder: (context, index) {
+                if (isLoading && index == messages.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: pink,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text('AJ जवाब लिख रही है...'),
+                      ],
+                    ),
+                  );
+                }
+
                 final item = messages[index];
                 final isUser = item['type'] == 'user';
 
                 return Align(
-                  alignment: isUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 13),
                     padding: const EdgeInsets.all(14),
                     constraints: const BoxConstraints(maxWidth: 310),
                     decoration: BoxDecoration(
-                      color: isUser
-                          ? const Color(0xFF6344A5)
-                          : card,
+                      color: isUser ? const Color(0xFF6344A5) : card,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(19),
                         topRight: const Radius.circular(19),
@@ -710,7 +774,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-
           SafeArea(
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -720,6 +783,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
+                      enabled: !isLoading,
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
@@ -740,16 +804,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   Container(
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [purple, pink],
-                      ),
+                      gradient: LinearGradient(colors: [purple, pink]),
                     ),
                     child: IconButton(
-                      onPressed: send,
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                      ),
+                      onPressed: isLoading ? null : send,
+                      icon: const Icon(Icons.send_rounded, color: Colors.white),
                     ),
                   ),
                 ],

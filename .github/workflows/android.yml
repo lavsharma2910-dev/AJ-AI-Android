@@ -24,6 +24,10 @@ jobs:
       - name: Generate Android files
         run: flutter create --platforms=android --org com.ajai --project-name aj_ai .
 
+      - name: Add Internet Permission
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+
       - name: Get dependencies
         run: flutter pub get
 
