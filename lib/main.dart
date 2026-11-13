@@ -1,6 +1,15 @@
+
 import 'package:flutter/material.dart';
 
-void main() => runApp(const AJAIApp());
+void main() {
+  runApp(const AJAIApp());
+}
+
+const Color bg = Color(0xFF090B18);
+const Color purple = Color(0xFF9B6DFF);
+const Color pink = Color(0xFFE58BDB);
+const Color card = Color(0xFF171A2E);
+const Color muted = Color(0xFF9DA3BD);
 
 class AJAIApp extends StatelessWidget {
   const AJAIApp({super.key});
@@ -11,84 +20,574 @@ class AJAIApp extends StatelessWidget {
       title: 'AJ AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF9B59B6)),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF9F5FC),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: bg,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: purple,
+          brightness: Brightness.dark,
+        ),
       ),
       home: const HomeScreen(),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int selectedTab = 0;
+
+  void preview(String name) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$name अभी निर्माण के चरण में है।'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: card,
+      ),
+    );
+  }
+
+  void openChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AJ AI ✨'),
-        centerTitle: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF17132E), bg, Color(0xFF101B32)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: selectedTab == 0
+              ? buildHome()
+              : buildOtherPage(),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 18),
-            Container(
-              height: 230,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFEADCF8), Color(0xFFFCE4EC)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFF111326),
+        indicatorColor: purple.withOpacity(0.22),
+        selectedIndex: selectedTab,
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            openChat();
+          } else {
+            setState(() => selectedTab = index);
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.face_retouching_natural),
+            label: 'Avatar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildHome() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: const LinearGradient(
+                    colors: [purple, pink],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(28),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 27,
+                ),
               ),
-              child: const Center(
+              const SizedBox(width: 12),
+              const Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.face_3_rounded, size: 100, color: Color(0xFF8E44AD)),
-                    SizedBox(height: 8),
-                    Text('AJ', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                    Text('Your AI companion', style: TextStyle(fontSize: 15)),
+                    Text(
+                      'AJ SOFTWARE LABS',
+                      style: TextStyle(
+                        color: muted,
+                        fontSize: 10,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'AJ AI Companion',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
+              IconButton(
+                onPressed: () => preview('Notifications'),
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 27),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF38265F),
+                  Color(0xFF20274F),
+                  Color(0xFF171B35),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: purple.withOpacity(0.4),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: purple.withOpacity(0.16),
+                  blurRadius: 28,
+                ),
+              ],
             ),
-            const SizedBox(height: 22),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: Color(0xFF62E6AE)),
+                      SizedBox(width: 7),
+                      Text(
+                        'YOUR AI COMPANION',
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+
+                Container(
+                  height: 155,
+                  width: 155,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [purple, pink, Color(0xFF5948C9)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: pink.withOpacity(0.3),
+                        blurRadius: 35,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF211B42),
+                    ),
+                    child: const Icon(
+                      Icons.face_3_rounded,
+                      size: 100,
+                      color: Color(0xFFE6C8FF),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 17),
+                const Text(
+                  'AJ',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 3,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Your Personal AI Companion',
+                  style: TextStyle(color: Color(0xFFD5C8F4)),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'नमस्ते! मैं AJ हूँ 💜',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'आज आप क्या करना चाहेंगे?',
+                  style: TextStyle(
+                    color: Color(0xFFD0CDE2),
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 26),
+
+          const Text(
+            'आपकी AJ से मुलाकात',
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 13),
+
+          Row(
+            children: [
+              Expanded(
+                child: FeatureCard(
+                  icon: Icons.chat_bubble_rounded,
+                  title: 'AI Chat',
+                  subtitle: 'बातचीत शुरू करें',
+                  colors: const [
+                    Color(0xFF8055D9),
+                    Color(0xFF5037A2),
+                  ],
+                  onTap: openChat,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FeatureCard(
+                  icon: Icons.mic_rounded,
+                  title: 'Voice Chat',
+                  subtitle: 'Coming Soon',
+                  colors: const [
+                    Color(0xFFD16DBD),
+                    Color(0xFF8A438E),
+                  ],
+                  onTap: () => preview('Voice Chat'),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 27),
+
+          const Text(
+            'Explore AJ',
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'आपके लिए खास सुविधाएँ',
+            style: TextStyle(color: muted, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.65,
+            children: [
+              SmallFeature(
+                icon: Icons.code_rounded,
+                title: 'Code Studio',
+                subtitle: 'Coding assistant',
+                onTap: () => preview('Code Studio'),
+              ),
+              SmallFeature(
+                icon: Icons.travel_explore_rounded,
+                title: 'Web Search',
+                subtitle: 'Explore information',
+                onTap: () => preview('Web Search'),
+              ),
+              SmallFeature(
+                icon: Icons.folder_open_rounded,
+                title: 'My Files',
+                subtitle: 'File assistant',
+                onTap: () => preview('My Files'),
+              ),
+              SmallFeature(
+                icon: Icons.psychology_alt_rounded,
+                title: 'Memory',
+                subtitle: 'Personal memory',
+                onTap: () => preview('Memory'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 22),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.07),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: pink, size: 27),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AJ AI is evolving',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'कुछ सुविधाएँ अभी निर्माण के चरण में हैं।',
+                        style: TextStyle(color: muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 17),
+          const Center(
+            child: Text(
+              'BUILD • INNOVATE • AUTOMATE',
+              style: TextStyle(
+                color: muted,
+                fontSize: 10,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildOtherPage() {
+    final isAvatar = selectedTab == 2;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isAvatar ? Icons.face_rounded : Icons.person_rounded,
+              size: 75,
+              color: purple,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              isAvatar ? 'AJ Avatar' : 'My Profile',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
             const Text(
-              'नमस्ते! मैं AJ हूँ 💜\nआज आप क्या बात करना चाहेंगे?',
+              'यह सेक्शन अगले विकास चरण में उपलब्ध होगा।',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, height: 1.5, fontWeight: FontWeight.w500),
+              style: TextStyle(color: muted),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: const Text('AJ से Chat करें'),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChatScreen()),
-                ),
-              ),
+            const SizedBox(height: 20),
+            OutlinedButton(
+              onPressed: () => setState(() => selectedTab = 0),
+              child: const Text('Back to Home'),
             ),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.mic_none),
-                label: const Text('Voice Chat (आगे जोड़ेंगे)'),
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Voice feature अगले चरण में जोड़ा जाएगा।')),
-                ),
-              ),
-            ),
-            const Spacer(),
-            const Text('Starter UI • AI connection अगला चरण', style: TextStyle(color: Colors.grey)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Color> colors;
+  final VoidCallback onTap;
+
+  const FeatureCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(21),
+        child: Ink(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(21),
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 29, color: Colors.white),
+              const SizedBox(height: 13),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFFE9DDF8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SmallFeature extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const SmallFeature({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: card,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.07),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: pink, size: 25),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: muted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -97,74 +596,161 @@ class HomeScreen extends StatelessWidget {
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
   final controller = TextEditingController();
-  final messages = <String>['AJ: नमस्ते! 😊 अभी मैं starter mode में हूँ।'];
+  final scrollController = ScrollController();
+
+  final List<Map<String, String>> messages = [
+    {
+      'type': 'aj',
+      'text': 'नमस्ते! 😊 मैं AJ हूँ। अभी मेरा Demo Chat Mode है।',
+    },
+  ];
 
   void send() {
     final value = controller.text.trim();
     if (value.isEmpty) return;
+
     setState(() {
-      messages.add('आप: $value');
-      messages.add('AJ: आपका संदेश मिल गया। AI backend जोड़ने के बाद मैं वास्तविक AI जवाब दूँगी।');
+      messages.add({'type': 'user', 'text': value});
+      messages.add({
+        'type': 'aj',
+        'text':
+            'आपका संदेश मिल गया। वास्तविक AI जवाब के लिए backend जोड़ना बाकी है।',
+      });
       controller.clear();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
   @override
   void dispose() {
     controller.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AJ के साथ Chat')),
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF111326),
+        title: const Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Color(0xFF6746AE),
+              child: Icon(Icons.face_3_rounded, color: Colors.white),
+            ),
+            SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('AJ AI', style: TextStyle(fontSize: 17)),
+                Text(
+                  'Demo Chat Mode',
+                  style: TextStyle(fontSize: 10, color: muted),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
+              controller: scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: messages.length,
-              itemBuilder: (_, i) => Align(
-                alignment: messages[i].startsWith('आप:') ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(13),
-                  constraints: const BoxConstraints(maxWidth: 320),
-                  decoration: BoxDecoration(
-                    color: messages[i].startsWith('आप:') ? const Color(0xFFE8D5F5) : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+              itemBuilder: (context, index) {
+                final item = messages[index];
+                final isUser = item['type'] == 'user';
+
+                return Align(
+                  alignment: isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 13),
+                    padding: const EdgeInsets.all(14),
+                    constraints: const BoxConstraints(maxWidth: 310),
+                    decoration: BoxDecoration(
+                      color: isUser
+                          ? const Color(0xFF6344A5)
+                          : card,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(19),
+                        topRight: const Radius.circular(19),
+                        bottomLeft: Radius.circular(isUser ? 19 : 4),
+                        bottomRight: Radius.circular(isUser ? 4 : 19),
+                      ),
+                    ),
+                    child: Text(
+                      item['text'] ?? '',
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                    ),
                   ),
-                  child: Text(messages[i], style: const TextStyle(fontSize: 16)),
-                ),
-              ),
+                );
+              },
             ),
           ),
+
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              color: const Color(0xFF111326),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: controller,
                       onSubmitted: (_) => send(),
-                      decoration: const InputDecoration(
-                        hintText: 'AJ को संदेश लिखें…',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: 'AJ को संदेश लिखें...',
+                        filled: true,
+                        fillColor: card,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 17,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: send,
-                    icon: const Icon(Icons.send),
+                  const SizedBox(width: 9),
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [purple, pink],
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: send,
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
