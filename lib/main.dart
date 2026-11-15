@@ -624,6 +624,52 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<String> pendingQueue = [];
   final List<Map<String, String>> messages = [];
 
+  List<Map<String, String>> buildChatContext() {
+    final pendingCounts = <String, int>{};
+    for (final item in pendingQueue) {
+      pendingCounts[item] = (pendingCounts[item] ?? 0) + 1;
+    }
+
+    final completed = List<Map<String, String>>.from(messages);
+
+    for (var i = completed.length - 1; i >= 0; i--) {
+      final item = completed[i];
+      if (item["type"] == "user") {
+        final value = item["text"] ?? "";
+        final count = pendingCounts[value] ?? 0;
+        if (count > 0) {
+          completed.removeAt(i);
+          pendingCounts[value] = count - 1;
+        }
+      }
+    }
+
+    final context = <Map<String, String>>[];
+    for (final item in completed) {
+      final type = item["type"];
+      final value = (item["text"] ?? "").trim();
+      if (value.isEmpty) continue;
+
+      if (type == "user") {
+        context.add({"role": "user", "text": value});
+      } else if (type == "aj" &&
+          !value.startsWith("नमस्ते!") &&
+          !value.startsWith("संदेश भेजा नहीं जा सका।") &&
+          !value.startsWith("Queue सेव नहीं हो पाई।")) {
+        context.add({"role": "model", "text": value});
+      }
+    }
+
+    final recent = context.length <= 12
+        ? List<Map<String, String>>.from(context)
+        : context.sublist(context.length - 12);
+
+    while (recent.isNotEmpty && recent.first["role"] != "user") {
+      recent.removeAt(0);
+    }
+    return recent;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -718,7 +764,7 @@ class _ChatScreenState extends State<ChatScreen> {
           final response = await http.post(
             Uri.parse(apiUrl),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'message': value}),
+            body: jsonEncode({'message': value, 'history': buildChatContext()}),
           ).timeout(const Duration(seconds: 60));
 
           final data = jsonDecode(response.body);
