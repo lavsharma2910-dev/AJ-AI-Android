@@ -695,6 +695,61 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+
+  Future<void> copyConversation() async {
+    if (messages.isEmpty) return;
+
+    final transcript = messages.map((item) {
+      final isUser = item['type'] == 'user';
+      return '${isUser ? 'आप' : 'AJ AI'}:\n${item['text'] ?? ''}';
+    }).join('\n\n--------------------\n\n');
+
+    await Clipboard.setData(ClipboardData(text: transcript));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('पूरी बातचीत Copy हो गई')),
+    );
+  }
+
+  Future<void> showConversation() async {
+    if (!mounted) return;
+
+    final transcript = messages.map((item) {
+      final isUser = item['type'] == 'user';
+      return '${isUser ? 'आप' : 'AJ AI'}:\n${item['text'] ?? ''}';
+    }).join('\n\n--------------------\n\n');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: card,
+        title: const Text('पूरी बातचीत'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(transcript),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: transcript));
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('Copy All'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('बंद करें'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> clearChat() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -820,6 +875,16 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Copy All',
+            onPressed: messages.isEmpty ? null : copyConversation,
+            icon: const Icon(Icons.copy_all_rounded),
+          ),
+          IconButton(
+            tooltip: 'View / Select All',
+            onPressed: messages.isEmpty ? null : showConversation,
+            icon: const Icon(Icons.select_all_rounded),
+          ),
           IconButton(
             tooltip: 'Clear Chat',
             onPressed: isLoading ? null : clearChat,
