@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -597,6 +599,7 @@ class SmallFeature extends StatelessWidget {
 }
 
 
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -610,15 +613,64 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const apiUrl =
       'https://aj-ai-backend.lavsharma2910.workers.dev/chat';
+  static const historyKey = 'aj_ai_chat_history_v1';
 
   bool isLoading = false;
+  bool historyLoaded = false;
 
-  final List<Map<String, String>> messages = [
-    {
-      'type': 'aj',
-      'text': 'नमस्ते! 😊 मैं AJ हूँ। अब आप मुझसे सीधे AI चैट कर सकते हैं।',
-    },
-  ];
+  final List<Map<String, String>> messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadHistory();
+  }
+
+  Future<void> loadHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(historyKey);
+
+      if (saved != null) {
+        final decoded = jsonDecode(saved);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is Map &&
+                item['type'] != null &&
+                item['text'] != null) {
+              messages.add({
+                'type': item['type'].toString(),
+                'text': item['text'].toString(),
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {
+      messages.clear();
+    }
+
+    if (messages.isEmpty) {
+      messages.add({
+        'type': 'aj',
+        'text': 'नमस्ते! 😊 मैं AJ हूँ। अब आप मुझसे सीधे AI चैट कर सकते हैं।',
+      });
+    }
+
+    if (!mounted) return;
+    setState(() => historyLoaded = true);
+    await saveHistory();
+    scrollToBottom();
+  }
+
+  Future<void> saveHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(historyKey, jsonEncode(messages));
+    } catch (e) {
+      debugPrint('Chat history save error: $e');
+    }
+  }
 
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -632,15 +684,64 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> copyMessage(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Message copied'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  Future<void> clearChat() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: card,
+        title: const Text('Clear Chat?'),
+        content: const Text('क्या आप पूरी Chat History मिटाना चाहते हैं?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('रद्द करें'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('मिटाएँ'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      messages
+        ..clear()
+        ..add({
+          'type': 'aj',
+          'text': 'नमस्ते! 😊 मैं AJ हूँ। अब आप मुझसे सीधे AI चैट कर सकते हैं।',
+        });
+    });
+    await saveHistory();
+    scrollToBottom();
+  }
+
   Future<void> send() async {
+    if (!historyLoaded) return;
+
     final value = controller.text.trim();
     if (value.isEmpty || isLoading) return;
 
     controller.clear();
+
     setState(() {
       messages.add({'type': 'user', 'text': value});
       isLoading = true;
     });
+    await saveHistory();
     scrollToBottom();
 
     try {
@@ -669,6 +770,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         messages.add({'type': 'aj', 'text': answer.toString()});
       });
+      await saveHistory();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -677,6 +779,7 @@ class _ChatScreenState extends State<ChatScreen> {
           'text': 'अभी जवाब नहीं मिल पाया। दोबारा कोशिश करें।\n\n$e',
         });
       });
+      await saveHistory();
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
@@ -716,63 +819,99 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Clear Chat',
+            onPressed: isLoading ? null : clearChat,
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length + (isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (isLoading && index == messages.length) {
-                  return const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: pink,
+            child: !historyLoaded
+                ? const Center(child: CircularProgressIndicator(color: pink))
+                : ListView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length + (isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (isLoading && index == messages.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 17,
+                                height: 17,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: pink,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text('AJ जवाब लिख रही है...'),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final item = messages[index];
+                      final isUser = item['type'] == 'user';
+                      final messageText = item['text'] ?? '';
+
+                      return Align(
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 13),
+                          padding: const EdgeInsets.all(10),
+                          constraints: const BoxConstraints(maxWidth: 310),
+                          decoration: BoxDecoration(
+                            color: isUser
+                                ? const Color(0xFF6344A5)
+                                : card,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(19),
+                              topRight: const Radius.circular(19),
+                              bottomLeft: Radius.circular(isUser ? 19 : 4),
+                              bottomRight: Radius.circular(isUser ? 4 : 19),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              SelectableText(
+                                messageText,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                padding: EdgeInsets.zero,
+                                tooltip: 'Copy message',
+                                onPressed: () => copyMessage(messageText),
+                                icon: const Icon(
+                                  Icons.copy_rounded,
+                                  size: 17,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(width: 10),
-                        Text('AJ जवाब लिख रही है...'),
-                      ],
-                    ),
-                  );
-                }
-
-                final item = messages[index];
-                final isUser = item['type'] == 'user';
-
-                return Align(
-                  alignment:
-                      isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 13),
-                    padding: const EdgeInsets.all(14),
-                    constraints: const BoxConstraints(maxWidth: 310),
-                    decoration: BoxDecoration(
-                      color: isUser ? const Color(0xFF6344A5) : card,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(19),
-                        topRight: const Radius.circular(19),
-                        bottomLeft: Radius.circular(isUser ? 19 : 4),
-                        bottomRight: Radius.circular(isUser ? 4 : 19),
-                      ),
-                    ),
-                    child: Text(
-                      item['text'] ?? '',
-                      style: const TextStyle(fontSize: 15, height: 1.4),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           SafeArea(
             child: Container(
@@ -783,7 +922,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      enabled: !isLoading,
+                      enabled: !isLoading && historyLoaded,
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
@@ -807,8 +946,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       gradient: LinearGradient(colors: [purple, pink]),
                     ),
                     child: IconButton(
-                      onPressed: isLoading ? null : send,
-                      icon: const Icon(Icons.send_rounded, color: Colors.white),
+                      onPressed: isLoading || !historyLoaded ? null : send,
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
