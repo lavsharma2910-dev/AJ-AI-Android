@@ -19,6 +19,7 @@ const MODELS = [
 ];
 
 async function callGemini(model, contents, apiKey) {
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
 
@@ -51,7 +52,8 @@ async function callGemini(model, contents, apiKey) {
     if (!apiResponse.ok) {
       return {
         ok: false,
-        status: apiResponse.status
+        status: apiResponse.status,
+        durationMs: Date.now() - startedAt
       };
     }
 
@@ -61,19 +63,21 @@ async function callGemini(model, contents, apiKey) {
       .trim();
 
     if (!answer) {
-      return { ok: false, status: 502 };
+      return { ok: false, status: 502, durationMs: Date.now() - startedAt };
     }
 
     return {
       ok: true,
       answer,
-      model
+      model,
+      durationMs: Date.now() - startedAt
     };
 
   } catch (error) {
     return {
       ok: false,
-      status: error.name === "AbortError" ? 408 : 503
+      status: error.name === "AbortError" ? 408 : 503,
+      durationMs: Date.now() - startedAt
     };
   } finally {
     clearTimeout(timeout);
@@ -82,6 +86,7 @@ async function callGemini(model, contents, apiKey) {
 
 export default {
   async fetch(request, env) {
+    const requestStartedAt = Date.now();
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -153,7 +158,20 @@ export default {
         env.GEMINI_API_KEY
       );
 
+      console.log(JSON.stringify({
+        event: "gemini_attempt",
+        model,
+        success: result.ok,
+        status: result.status || 200,
+        durationMs: result.durationMs
+      }));
+
       if (result.ok) {
+        console.log(JSON.stringify({
+          event: "chat_complete",
+          totalDurationMs: Date.now() - requestStartedAt,
+          fallbackUsed: model !== MODELS[0]
+        }));
         return response({
           reply: result.answer,
           model: result.model,
@@ -173,6 +191,7 @@ export default {
       }
     }
 
+    console.log(JSON.stringify({ event: "chat_failed", totalDurationMs: Date.now() - requestStartedAt }));
     return response({
       error: "Both AI models are temporarily unavailable. Please try again shortly."
     }, 503);
