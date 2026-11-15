@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -614,10 +615,13 @@ class _ChatScreenState extends State<ChatScreen> {
   static const apiUrl =
       'https://aj-ai-backend.lavsharma2910.workers.dev/chat';
   static const historyKey = 'aj_ai_chat_history_v1';
+  static const queueKey = 'aj_ai_pending_queue_v1';
 
   bool isLoading = false;
   bool historyLoaded = false;
+  bool queueProcessing = false;
 
+  final List<String> pendingQueue = [];
   final List<Map<String, String>> messages = [];
 
   @override
@@ -646,8 +650,20 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         }
       }
-    } catch (_) {
-      messages.clear();
+
+      final savedQueue = prefs.getString(queueKey);
+      if (savedQueue != null) {
+        final decodedQueue = jsonDecode(savedQueue);
+        if (decodedQueue is List) {
+          for (final item in decodedQueue) {
+            if (item is String && item.trim().isNotEmpty) {
+              pendingQueue.add(item);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Chat restore error: $e');
     }
 
     if (messages.isEmpty) {
@@ -661,6 +677,10 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => historyLoaded = true);
     await saveHistory();
     scrollToBottom();
+
+    if (pendingQueue.isNotEmpty) {
+      processQueue();
+    }
   }
 
   Future<void> saveHistory() async {
@@ -672,6 +692,90 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<bool> savePendingQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(queueKey, jsonEncode(pendingQueue));
+    } catch (e) {
+      debugPrint('Pending queue save error: $e');
+      return false;
+    }
+  }
+
+  Future<void> processQueue() async {
+    if (!historyLoaded || queueProcessing || !mounted) return;
+
+    queueProcessing = true;
+
+    try {
+      while (mounted && pendingQueue.isNotEmpty) {
+        final value = pendingQueue.first;
+
+        setState(() => isLoading = true);
+        scrollToBottom();
+
+        try {
+          final response = await http.post(
+            Uri.parse(apiUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'message': value}),
+          ).timeout(const Duration(seconds: 60));
+
+          final data = jsonDecode(response.body);
+
+          if (response.statusCode != 200) {
+            throw Exception(
+              data is Map
+                  ? (data['error'] ?? data['detail'] ??
+                      'Server error ${response.statusCode}').toString()
+                  : 'Server error ${response.statusCode}',
+            );
+          }
+
+          final answer = data is Map ? data['reply'] : null;
+          if (answer == null || answer.toString().trim().isEmpty) {
+            throw Exception('AI से खाली जवाब मिला।');
+          }
+
+          if (!mounted) break;
+
+          // Remove only after a valid reply is received.
+          pendingQueue.removeAt(0);
+          if (!await savePendingQueue()) {
+            pendingQueue.insert(0, value);
+            throw Exception('Queue सेव नहीं हो पाई। संदेश सुरक्षित रखा गया है।');
+          }
+
+          setState(() {
+            messages.add({'type': 'aj', 'text': answer.toString()});
+          });
+          await saveHistory();
+        } catch (e) {
+          if (!mounted) break;
+
+          // Keep the failed message in the queue and stop.
+          setState(() {
+            messages.add({
+              'type': 'aj',
+              'text': 'संदेश भेजा नहीं जा सका। Queue में सुरक्षित है। Retry बाद में करें।\n\n$e',
+            });
+          });
+          await saveHistory();
+          break;
+        } finally {
+          if (mounted) {
+            setState(() => isLoading = false);
+            scrollToBottom();
+          }
+        }
+      }
+    } finally {
+      queueProcessing = false;
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scrollController.hasClients) {
@@ -788,59 +892,33 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!historyLoaded) return;
 
     final value = controller.text.trim();
-    if (value.isEmpty || isLoading) return;
+    if (value.isEmpty) return;
 
     controller.clear();
 
     setState(() {
       messages.add({'type': 'user', 'text': value});
-      isLoading = true;
+      pendingQueue.add(value);
     });
+
     await saveHistory();
+    final queueSaved = await savePendingQueue();
     scrollToBottom();
 
-    try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': value}),
-      ).timeout(const Duration(seconds: 60));
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          data is Map && data['detail'] != null
-              ? data['detail'].toString()
-              : 'Server error ${response.statusCode}',
-        );
-      }
-
-      final answer = data is Map ? data['reply'] : null;
-      if (answer == null || answer.toString().trim().isEmpty) {
-        throw Exception('AI से खाली जवाब मिला।');
-      }
-
+    if (!queueSaved) {
       if (!mounted) return;
       setState(() {
-        messages.add({'type': 'aj', 'text': answer.toString()});
-      });
-      await saveHistory();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
+        pendingQueue.removeLast();
         messages.add({
           'type': 'aj',
-          'text': 'अभी जवाब नहीं मिल पाया। दोबारा कोशिश करें।\n\n$e',
+          'text': 'Queue सेव नहीं हो पाई। कृपया संदेश दोबारा भेजें।',
         });
       });
       await saveHistory();
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-        scrollToBottom();
-      }
+      return;
     }
+
+    processQueue();
   }
 
   @override
@@ -887,7 +965,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             tooltip: 'Clear Chat',
-            onPressed: isLoading ? null : clearChat,
+            onPressed: (isLoading || pendingQueue.isNotEmpty) ? null : clearChat,
             icon: const Icon(Icons.delete_outline),
           ),
         ],
@@ -903,8 +981,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemCount: messages.length + (isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (isLoading && index == messages.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(12),
+                        return Padding(
+                          padding: const EdgeInsets.all(12),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -917,7 +995,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               ),
                               SizedBox(width: 10),
-                              Text('AJ जवाब लिख रही है...'),
+                              Text('AJ जवाब लिख रही है...  •  बाकी: ${pendingQueue.length}'),
                             ],
                           ),
                         );
@@ -978,6 +1056,30 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
+          if (historyLoaded && pendingQueue.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              color: const Color(0xFF191B32),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions, color: pink, size: 19),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pending messages: ${pendingQueue.length}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: (isLoading || queueProcessing)
+                        ? null
+                        : processQueue,
+                    icon: const Icon(Icons.refresh, size: 17),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
           SafeArea(
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -987,7 +1089,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      enabled: !isLoading && historyLoaded,
+                      enabled: historyLoaded,
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
@@ -1011,7 +1113,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       gradient: LinearGradient(colors: [purple, pink]),
                     ),
                     child: IconButton(
-                      onPressed: isLoading || !historyLoaded ? null : send,
+                      onPressed: !historyLoaded ? null : send,
                       icon: const Icon(
                         Icons.send_rounded,
                         color: Colors.white,
