@@ -1,10 +1,15 @@
+
 import 'dart:async';
+import 'package:aj_ai/pending_chat_message.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+
+
+
 
 void main() {
   runApp(const AJAIApp());
@@ -601,6 +606,7 @@ class SmallFeature extends StatelessWidget {
 
 
 
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -614,20 +620,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const apiUrl =
       'https://aj-ai-backend.lavsharma2910.workers.dev/chat';
+  static const chatStateKey = 'aj_ai_chat_state_v2';
   static const historyKey = 'aj_ai_chat_history_v1';
   static const queueKey = 'aj_ai_pending_queue_v1';
 
   bool isLoading = false;
   bool historyLoaded = false;
   bool queueProcessing = false;
+  bool sendSaving = false;
+  bool restoreFailed = false;
 
-  final List<String> pendingQueue = [];
+  final List<PendingChatMessage> pendingQueue = [];
   final List<Map<String, String>> messages = [];
 
   List<Map<String, String>> buildChatContext() {
     final pendingCounts = <String, int>{};
     for (final item in pendingQueue) {
-      pendingCounts[item] = (pendingCounts[item] ?? 0) + 1;
+      pendingCounts[item.text] = (pendingCounts[item.text] ?? 0) + 1;
     }
 
     final completed = List<Map<String, String>>.from(messages);
@@ -676,41 +685,97 @@ class _ChatScreenState extends State<ChatScreen> {
     loadHistory();
   }
 
+  bool queueRestoreSafe = true;
+
   Future<void> loadHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(historyKey);
+      final savedV2 = prefs.getString(chatStateKey);
 
-      if (saved != null) {
-        final decoded = jsonDecode(saved);
-        if (decoded is List) {
+      if (savedV2 != null) {
+        final decoded = jsonDecode(savedV2);
+        if (decoded is! Map ||
+            decoded['messages'] is! List ||
+            decoded['pendingQueue'] is! List) {
+          throw const FormatException('Invalid AJ chat state v2');
+        }
+
+        for (final item in decoded['messages']) {
+          if (item is! Map ||
+              item['type'] is! String ||
+              item['text'] is! String) {
+            throw const FormatException('Invalid saved message');
+          }
+          messages.add({
+            'type': item['type'] as String,
+            'text': item['text'] as String,
+          });
+        }
+
+        final ids = <String>{};
+        for (final item in decoded['pendingQueue']) {
+          final queued = PendingChatMessage.fromJson(item);
+          if (!ids.add(queued.id)) {
+            throw const FormatException('Duplicate queued request ID');
+          }
+          pendingQueue.add(queued);
+        }
+      } else {
+        // One-time migration from the two legacy keys.
+        final savedHistory = prefs.getString(historyKey);
+        final savedQueue = prefs.getString(queueKey);
+
+        if (savedHistory != null) {
+          final decoded = jsonDecode(savedHistory);
+          if (decoded is! List) {
+            throw const FormatException('Invalid legacy chat history');
+          }
           for (final item in decoded) {
-            if (item is Map &&
-                item['type'] != null &&
-                item['text'] != null) {
-              messages.add({
-                'type': item['type'].toString(),
-                'text': item['text'].toString(),
-              });
+            if (item is! Map ||
+                item['type'] == null ||
+                item['text'] == null) {
+              throw const FormatException('Invalid legacy message');
             }
+            messages.add({
+              'type': item['type'].toString(),
+              'text': item['text'].toString(),
+            });
           }
         }
-      }
 
-      final savedQueue = prefs.getString(queueKey);
-      if (savedQueue != null) {
-        final decodedQueue = jsonDecode(savedQueue);
-        if (decodedQueue is List) {
-          for (final item in decodedQueue) {
-            if (item is String && item.trim().isNotEmpty) {
-              pendingQueue.add(item);
+        if (savedQueue != null) {
+          final decoded = jsonDecode(savedQueue);
+          if (decoded is! List) {
+            throw const FormatException('Invalid legacy pending queue');
+          }
+          final ids = <String>{};
+          for (final item in decoded) {
+            if (item is String && item.trim().isEmpty) continue;
+            var queued = PendingChatMessage.fromJson(item);
+            if (!ids.add(queued.id)) {
+              queued = PendingChatMessage(
+                id: createRequestId(),
+                text: queued.text,
+                createdAt: queued.createdAt,
+                retryCount: queued.retryCount,
+              );
+              ids.add(queued.id);
             }
+            pendingQueue.add(queued);
           }
         }
       }
     } catch (e) {
-      debugPrint('Chat restore error: $e');
+      queueRestoreSafe = false;
+      restoreFailed = true;
+      debugPrint('Chat restore error; storage left untouched: $e');
+      if (mounted) {
+        setState(() => historyLoaded = true);
+      }
+      return;
     }
+
+    if (!queueRestoreSafe) return;
 
     if (messages.isEmpty) {
       messages.add({
@@ -719,56 +784,81 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
+    // Persist migration/initial state before any network processing.
+    if (!await saveChatState()) {
+      queueRestoreSafe = false;
+      restoreFailed = true;
+      debugPrint('Chat state initialization could not be saved.');
+      if (mounted) {
+        setState(() => historyLoaded = true);
+      }
+      return;
+    }
+
     if (!mounted) return;
     setState(() => historyLoaded = true);
-    await saveHistory();
     scrollToBottom();
 
-    if (pendingQueue.isNotEmpty) {
+    if (queueRestoreSafe && pendingQueue.isNotEmpty) {
       processQueue();
     }
   }
 
-  Future<void> saveHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(historyKey, jsonEncode(messages));
-    } catch (e) {
-      debugPrint('Chat history save error: $e');
-    }
+  Future<void> retryHistoryRestore() async {
+    if (!mounted || !restoreFailed || queueProcessing || sendSaving) return;
+
+    setState(() {
+      messages.clear();
+      pendingQueue.clear();
+      historyLoaded = false;
+      restoreFailed = false;
+      queueRestoreSafe = true;
+    });
+
+    await loadHistory();
   }
 
-  Future<bool> savePendingQueue() async {
+  Future<bool> saveChatState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return await prefs.setString(queueKey, jsonEncode(pendingQueue));
+      final state = {
+        'version': 2,
+        'messages': messages,
+        'pendingQueue': pendingQueue.map((item) => item.toJson()).toList(),
+        'savedAt': DateTime.now().toUtc().toIso8601String(),
+      };
+      return await prefs.setString(chatStateKey, jsonEncode(state));
     } catch (e) {
-      debugPrint('Pending queue save error: $e');
+      debugPrint('Chat state save error: $e');
       return false;
     }
   }
 
   Future<void> processQueue() async {
-    if (!historyLoaded || queueProcessing || !mounted) return;
+    if (!queueRestoreSafe || !historyLoaded || queueProcessing || !mounted) {
+      return;
+    }
 
     queueProcessing = true;
-
     try {
       while (mounted && pendingQueue.isNotEmpty) {
-        final value = pendingQueue.first;
-
+        final queuedMessage = pendingQueue.first;
         setState(() => isLoading = true);
         scrollToBottom();
 
+        var persistenceFailed = false;
         try {
           final response = await http.post(
             Uri.parse(apiUrl),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'message': value, 'history': buildChatContext()}),
+            body: jsonEncode({
+              'message': queuedMessage.text,
+              'requestId': queuedMessage.id,
+              'history': buildChatContext(),
+            }),
           ).timeout(const Duration(seconds: 60));
 
           final data = jsonDecode(response.body);
-
           if (response.statusCode != 200) {
             throw Exception(
               data is Map
@@ -782,31 +872,40 @@ class _ChatScreenState extends State<ChatScreen> {
           if (answer == null || answer.toString().trim().isEmpty) {
             throw Exception('AI से खाली जवाब मिला।');
           }
-
           if (!mounted) break;
 
-          // Remove only after a valid reply is received.
-          pendingQueue.removeAt(0);
-          if (!await savePendingQueue()) {
-            pendingQueue.insert(0, value);
-            throw Exception('Queue सेव नहीं हो पाई। संदेश सुरक्षित रखा गया है।');
-          }
+          // Commit reply and queue removal together in the same state record.
+          final oldMessages = List<Map<String, String>>.from(messages);
+          final oldQueue = List<PendingChatMessage>.from(pendingQueue);
 
           setState(() {
+            pendingQueue.removeWhere((item) => item.id == queuedMessage.id);
             messages.add({'type': 'aj', 'text': answer.toString()});
           });
-          await saveHistory();
+
+          if (!await saveChatState()) {
+            if (!mounted) break;
+            setState(() {
+              messages
+                ..clear()
+                ..addAll(oldMessages);
+              pendingQueue
+                ..clear()
+                ..addAll(oldQueue);
+            });
+            persistenceFailed = true;
+            break;
+          }
         } catch (e) {
           if (!mounted) break;
-
-          // Keep the failed message in the queue and stop.
+          if (persistenceFailed) break;
           setState(() {
             messages.add({
               'type': 'aj',
               'text': 'संदेश भेजा नहीं जा सका। Queue में सुरक्षित है। Retry बाद में करें।\n\n$e',
             });
           });
-          await saveHistory();
+          await saveChatState();
           break;
         } finally {
           if (mounted) {
@@ -817,11 +916,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } finally {
       queueProcessing = false;
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
+
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scrollController.hasClients) {
@@ -901,6 +999,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> clearChat() async {
+    if (!mounted ||
+        !historyLoaded ||
+        restoreFailed ||
+        sendSaving ||
+        pendingQueue.isNotEmpty ||
+        queueProcessing) {
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -922,6 +1029,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (confirm != true) return;
 
+    final oldMessages = List<Map<String, String>>.from(messages);
     setState(() {
       messages
         ..clear()
@@ -930,41 +1038,82 @@ class _ChatScreenState extends State<ChatScreen> {
           'text': 'नमस्ते! 😊 मैं AJ हूँ। अब आप मुझसे सीधे AI चैट कर सकते हैं।',
         });
     });
-    await saveHistory();
+
+    if (!await saveChatState()) {
+      if (!mounted) return;
+      setState(() {
+        messages
+          ..clear()
+          ..addAll(oldMessages);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chat save नहीं हुई; पुरानी History सुरक्षित रखी गई।')),
+        );
+      }
+      return;
+    }
     scrollToBottom();
   }
 
   Future<void> send() async {
-    if (!historyLoaded) return;
+    if (!historyLoaded || !queueRestoreSafe || sendSaving || !mounted) {
+      return;
+    }
 
     final value = controller.text.trim();
     if (value.isEmpty) return;
 
-    controller.clear();
+    final oldMessages = List<Map<String, String>>.from(messages);
+    final oldQueue = List<PendingChatMessage>.from(pendingQueue);
 
+    sendSaving = true;
     setState(() {
       messages.add({'type': 'user', 'text': value});
-      pendingQueue.add(value);
+      pendingQueue.add(PendingChatMessage(
+        id: createRequestId(),
+        text: value,
+        createdAt: DateTime.now().toUtc(),
+      ));
     });
-
-    await saveHistory();
-    final queueSaved = await savePendingQueue();
+    controller.clear();
     scrollToBottom();
 
-    if (!queueSaved) {
-      if (!mounted) return;
-      setState(() {
-        pendingQueue.removeLast();
-        messages.add({
-          'type': 'aj',
-          'text': 'Queue सेव नहीं हो पाई। कृपया संदेश दोबारा भेजें।',
-        });
-      });
-      await saveHistory();
-      return;
+    var saved = false;
+    try {
+      saved = await saveChatState();
+    } catch (e) {
+      debugPrint('Send persistence error: $e');
     }
 
-    processQueue();
+    if (!mounted) return;
+
+    if (!saved) {
+      setState(() {
+        messages
+          ..clear()
+          ..addAll(oldMessages);
+        pendingQueue
+          ..clear()
+          ..addAll(oldQueue);
+      });
+      controller.text = value;
+      controller.selection = TextSelection.collapsed(
+        offset: controller.text.length,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('संदेश सेव नहीं हुआ। टेक्स्ट वापस रखा गया है।'),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => sendSaving = false);
+
+    if (saved) {
+      processQueue();
+    }
   }
 
   @override
@@ -1011,7 +1160,14 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             tooltip: 'Clear Chat',
-            onPressed: (isLoading || pendingQueue.isNotEmpty) ? null : clearChat,
+            onPressed: (!historyLoaded ||
+                    restoreFailed ||
+                    sendSaving ||
+                    isLoading ||
+                    queueProcessing ||
+                    pendingQueue.isNotEmpty)
+                ? null
+                : clearChat,
             icon: const Icon(Icons.delete_outline),
           ),
         ],
@@ -1019,9 +1175,33 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: !historyLoaded
-                ? const Center(child: CircularProgressIndicator(color: pink))
-                : ListView.builder(
+            child: restoreFailed
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange, size: 42),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Chat History restore नहीं हो सकी। आपका पुराना डेटा सुरक्षित रखा गया है।',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: retryHistoryRestore,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry Restore'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : !historyLoaded
+                    ? const Center(child: CircularProgressIndicator(color: pink))
+                    : ListView.builder(
                     controller: scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: messages.length + (isLoading ? 1 : 0),
@@ -1135,7 +1315,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      enabled: historyLoaded,
+                      enabled: historyLoaded && !sendSaving && !restoreFailed,
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
@@ -1159,7 +1339,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       gradient: LinearGradient(colors: [purple, pink]),
                     ),
                     child: IconButton(
-                      onPressed: !historyLoaded ? null : send,
+                      onPressed: (!historyLoaded || sendSaving || restoreFailed) ? null : send,
                       icon: const Icon(
                         Icons.send_rounded,
                         color: Colors.white,
