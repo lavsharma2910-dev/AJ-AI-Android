@@ -38,7 +38,7 @@ export function buildConversationContents(message, rawHistory) {
     const previous = history[history.length - 1];
     if (previous && previous.role === item.role) {
       previous.parts[0].text = (
-        previous.parts[0].text + "\\n\\n" + text
+        previous.parts[0].text + "\n\n" + text
       ).slice(-8000);
     } else {
       history.push({
