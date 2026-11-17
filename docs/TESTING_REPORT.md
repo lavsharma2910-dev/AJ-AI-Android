@@ -52,7 +52,15 @@ Required before release:
 ## 7. Test Evidence Policy
 Only mark a test PASSED when its result has been observed and recorded. Keep incomplete tests PARTIAL or PENDING. Update this report after each meaningful test batch.
 
-## 8. Update 30 — Web Knowledge (2026-11-17)
+## 8. Update 30 — Privacy-First AI Core Foundation
+- Worker syntax check and backend tests: PENDING latest CI run.
+- Gemini live API response test: PENDING; requires configured server-side `GEMINI_API_KEY`.
+- Provider adapter and model fallback: source implementation present; end-to-end test PENDING.
+- Tavily / external search: intentionally removed from this update.
+- Self-hosted inference: PLANNED; not implemented or deployed.
+- APK build and regression tests: PENDING latest CI run.
+- Production Worker deployment: NOT PERFORMED.
+- Do not use sensitive/private user data in prototype tests. (2026-11-17)
 - Search intent unit tests: added; first CI run exposed an escaping defect in the English word-boundary regex; source corrected in commit 2728a3a; rerun pending.
 - Tavily result normalization tests: added; CI result pending.
 - Worker syntax check: pending latest workflow.
