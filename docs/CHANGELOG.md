@@ -39,7 +39,13 @@ This file records known project changes. Planned work is not marked as completed
 - Include commit hash where available.
 - Keep planned features separate from completed work.
 
-## Update 30 — Live Web Knowledge (2026-11-17)
+## Update 30 — Privacy-First AI Core Foundation (2026-11-17)
+- Replaced direct provider-specific chat orchestration with a backend AI adapter entry point.
+- Kept Gemini as a temporary prototype engine with model-level fallback.
+- Removed Tavily search integration, search triggers, search secrets and third-party web-search calls from Worker source.
+- Explicitly reports external web search as disabled; no live-search capability is claimed.
+- Added tests for provider selection, adapter boundary and conversation context.
+- No production Worker deployment or PR merge performed.
 - Branch: feature/update-30-web-knowledge
 - Added Tavily Basic Search integration to the Cloudflare Worker.
 - Added explicit freshness/search intent detection; ordinary chat does not spend search credits.
