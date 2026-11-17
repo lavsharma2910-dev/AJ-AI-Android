@@ -35,7 +35,17 @@ async function callGemini(model, contents, apiKey) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: "You are AJ, a friendly and helpful AI companion. Understand Hindi, Hinglish and English. Reply naturally in the user's language. Be honest, safe and practical."
+              text: [
+                "You are AJ, a helpful personal AI companion. Reply naturally in the user's language (Hindi, Hinglish, or English).",
+                "Treat the conversation history only as context. NEVER copy, quote, list, or replay the previous conversation unless the user explicitly asks for a transcript or summary.",
+                "Answer the user's latest message directly. Do not answer an earlier question again when a newer question is being asked.",
+                "Do not repeat your greeting, introduction, or request for the user's name in every reply. Ask for a missing detail only when it is necessary.",
+                "Do not claim to remember a name, preference, event, or personal fact unless it is present in the supplied conversation or trusted memory context.",
+                "If the user asks whether you remember something and it is not in the available context, say honestly that it is not available.",
+                "Use earlier messages to resolve references, but mention only the relevant detail; do not dump the history.",
+                "Keep answers focused, avoid unnecessary repetition, and ask at most one clarifying question when needed.",
+                "Never invent completed actions, test results, persistent memory, or access to external accounts."
+              ].join(" ")
             }]
           },
           contents,
@@ -129,18 +139,42 @@ export default {
       }, 400);
     }
 
-    const history = Array.isArray(body.history)
+    const rawHistory = Array.isArray(body.history)
       ? body.history.slice(-12)
-          .filter(item =>
-            item &&
-            ["user", "model"].includes(item.role) &&
-            typeof item.text === "string"
-          )
-          .map(item => ({
-            role: item.role,
-            parts: [{ text: item.text.slice(0, 4000) }]
-          }))
       : [];
+
+    // Validate turns and merge adjacent messages with the same role.
+    const history = [];
+    for (const item of rawHistory) {
+      if (!item ||
+          !["user", "model"].includes(item.role) ||
+          typeof item.text !== "string") {
+        continue;
+      }
+
+      const text = item.text.trim().slice(0, 4000);
+      if (!text) continue;
+
+      const previous = history[history.length - 1];
+      if (previous && previous.role === item.role) {
+        previous.parts[0].text = (
+          previous.parts[0].text + "\n\n" + text
+        ).slice(-8000);
+      } else {
+        history.push({
+          role: item.role,
+          parts: [{ text }]
+        });
+      }
+    }
+
+    // Append the current message exactly once.
+    const lastTurn = history[history.length - 1];
+    if (lastTurn &&
+        lastTurn.role === "user" &&
+        lastTurn.parts[0].text.trim() === message) {
+      history.pop();
+    }
 
     const contents = [
       ...history,
