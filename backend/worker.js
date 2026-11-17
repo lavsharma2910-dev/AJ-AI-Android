@@ -284,7 +284,13 @@ export default {
       const search = await searchWeb(message, env.TAVILY_API_KEY);
       webSources = search.results;
       webSearchStatus = search.ok ? "used" : search.reason;
-      if (search.ok) addSearchContext(contents, webSources);
+      if (search.ok) {
+        addSearchContext(contents, webSources);
+      } else {
+        contents[contents.length - 1].parts[0].text +=
+          "\\n\\nLIVE WEB SEARCH WAS NOT AVAILABLE (" + webSearchStatus +
+          "). Do not claim that you searched or verified current facts. Tell the user briefly that live search is unavailable and answer only with clearly qualified general knowledge if useful.";
+      }
       console.log(JSON.stringify({
         event: "web_search",
         status: webSearchStatus,
