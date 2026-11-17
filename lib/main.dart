@@ -607,6 +607,16 @@ class SmallFeature extends StatelessWidget {
 
 
 
+class _QueueRequestException implements Exception {
+  final String message;
+  final bool permanent;
+
+  const _QueueRequestException(this.message, {this.permanent = false});
+
+  @override
+  String toString() => message;
+}
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -784,7 +794,15 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    // Persist migration/initial state before any network processing.
+    // A request left in "processing" was interrupted by app closure.
+    // Recover it with the same request ID and persisted attempt count.
+    for (var i = 0; i < pendingQueue.length; i++) {
+      if (pendingQueue[i].status == 'processing') {
+        pendingQueue[i] = pendingQueue[i].copyWith(status: 'pending');
+      }
+    }
+
+    // Persist migration/recovery before any network processing.
     if (!await saveChatState()) {
       queueRestoreSafe = false;
       restoreFailed = true;
@@ -834,89 +852,252 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> processQueue() async {
+  Future<void> processQueue({bool retryFailed = false}) async {
     if (!queueRestoreSafe || !historyLoaded || queueProcessing || !mounted) {
       return;
     }
 
     queueProcessing = true;
-    try {
-      while (mounted && pendingQueue.isNotEmpty) {
-        final queuedMessage = pendingQueue.first;
-        setState(() => isLoading = true);
-        scrollToBottom();
+    var deliveredCount = 0;
+    var failedCount = 0;
+    var storageBlocked = false;
 
-        var persistenceFailed = false;
+    try {
+      if (retryFailed) {
+        final previousQueue = List<PendingChatMessage>.from(pendingQueue);
+        setState(() {
+          for (var i = 0; i < pendingQueue.length; i++) {
+            if (pendingQueue[i].status == 'failed') {
+              pendingQueue[i] = pendingQueue[i].copyWith(
+                status: 'pending',
+                retryCount: 0,
+              );
+            }
+          }
+        });
+
+        if (!await saveChatState()) {
+          if (mounted) {
+            setState(() {
+              pendingQueue
+                ..clear()
+                ..addAll(previousQueue);
+            });
+          }
+          storageBlocked = true;
+        }
+      }
+
+      while (mounted && !storageBlocked) {
+        final index = pendingQueue.indexWhere(
+          (item) => item.status == 'pending',
+        );
+        if (index == -1) break;
+
+        final queued = pendingQueue[index];
+
+        // Retry count is persisted across restarts, so an interrupted request
+        // cannot silently reset its retry budget.
+        if (queued.retryCount >= 3) {
+          final previousQueue = List<PendingChatMessage>.from(pendingQueue);
+          setState(() {
+            pendingQueue[index] = queued.copyWith(status: 'failed');
+          });
+          if (!await saveChatState()) {
+            if (mounted) {
+              setState(() {
+                pendingQueue
+                  ..clear()
+                  ..addAll(previousQueue);
+              });
+            }
+            storageBlocked = true;
+            break;
+          }
+          failedCount++;
+          continue;
+        }
+
+        final nextAttempt = queued.retryCount + 1;
+        if (nextAttempt > 1) {
+          await Future.delayed(Duration(seconds: nextAttempt - 1));
+          if (!mounted) break;
+        }
+
+        final currentIndex = pendingQueue.indexWhere(
+          (item) => item.id == queued.id,
+        );
+        if (currentIndex == -1) continue;
+
+        final previousQueue = List<PendingChatMessage>.from(pendingQueue);
+        setState(() {
+          pendingQueue[currentIndex] = pendingQueue[currentIndex].copyWith(
+            status: 'processing',
+            retryCount: nextAttempt,
+          );
+          isLoading = true;
+        });
+
+        // Save the processing marker and attempt number before network I/O.
+        if (!await saveChatState()) {
+          if (mounted) {
+            setState(() {
+              pendingQueue
+                ..clear()
+                ..addAll(previousQueue);
+            });
+          }
+          storageBlocked = true;
+          break;
+        }
+
         try {
           final response = await http.post(
             Uri.parse(apiUrl),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'message': queuedMessage.text,
-              'requestId': queuedMessage.id,
+              'message': queued.text,
+              'requestId': queued.id,
               'history': buildChatContext(),
             }),
           ).timeout(const Duration(seconds: 60));
 
-          final data = jsonDecode(response.body);
+          dynamic data;
+          try {
+            data = jsonDecode(response.body);
+          } on FormatException {
+            throw const _QueueRequestException('Server से मान्य जवाब नहीं मिला।');
+          }
+
           if (response.statusCode != 200) {
-            throw Exception(
-              data is Map
-                  ? (data['error'] ?? data['detail'] ??
-                      'Server error ${response.statusCode}').toString()
-                  : 'Server error ${response.statusCode}',
+            final detail = data is Map
+                ? (data['error'] ?? data['detail'] ??
+                    'Server error ${response.statusCode}').toString()
+                : 'Server error ${response.statusCode}';
+            throw _QueueRequestException(
+              detail,
+              permanent: response.statusCode >= 400 &&
+                  response.statusCode < 500 &&
+                  response.statusCode != 408 &&
+                  response.statusCode != 429,
             );
           }
 
           final answer = data is Map ? data['reply'] : null;
           if (answer == null || answer.toString().trim().isEmpty) {
-            throw Exception('AI से खाली जवाब मिला।');
+            throw const _QueueRequestException('AI से खाली जवाब मिला।');
           }
           if (!mounted) break;
 
-          // Commit reply and queue removal together in the same state record.
-          final oldMessages = List<Map<String, String>>.from(messages);
-          final oldQueue = List<PendingChatMessage>.from(pendingQueue);
+          final previousMessages =
+              List<Map<String, String>>.from(messages);
+          final queueBeforeCompletion =
+              List<PendingChatMessage>.from(pendingQueue);
 
           setState(() {
-            pendingQueue.removeWhere((item) => item.id == queuedMessage.id);
-            messages.add({'type': 'aj', 'text': answer.toString()});
+            pendingQueue.removeWhere((item) => item.id == queued.id);
+            messages.add({
+              'type': 'aj',
+              'text': answer.toString().trim(),
+            });
+          });
+
+          // Reply and queue removal are persisted atomically in one record.
+          if (!await saveChatState()) {
+            if (mounted) {
+              setState(() {
+                messages
+                  ..clear()
+                  ..addAll(previousMessages);
+                pendingQueue
+                  ..clear()
+                  ..addAll(queueBeforeCompletion);
+              });
+            }
+            // A replay can duplicate server work until Worker-side idempotency
+            // is implemented. Stop rather than issuing another local request.
+            storageBlocked = true;
+            break;
+          }
+
+          deliveredCount++;
+        } catch (error) {
+          debugPrint('Queue attempt $nextAttempt failed for ${queued.id}: $error');
+          if (!mounted) break;
+
+          final failedIndex = pendingQueue.indexWhere(
+            (item) => item.id == queued.id,
+          );
+          if (failedIndex == -1) continue;
+
+          final previousQueue =
+              List<PendingChatMessage>.from(pendingQueue);
+          final permanent = error is _QueueRequestException &&
+              error.permanent;
+          final isFinalAttempt = nextAttempt >= 3 || permanent;
+
+          setState(() {
+            pendingQueue[failedIndex] =
+                pendingQueue[failedIndex].copyWith(
+              status: isFinalAttempt ? 'failed' : 'pending',
+            );
           });
 
           if (!await saveChatState()) {
-            if (!mounted) break;
-            setState(() {
-              messages
-                ..clear()
-                ..addAll(oldMessages);
-              pendingQueue
-                ..clear()
-                ..addAll(oldQueue);
-            });
-            persistenceFailed = true;
+            if (mounted) {
+              setState(() {
+                pendingQueue
+                  ..clear()
+                  ..addAll(previousQueue);
+              });
+            }
+            storageBlocked = true;
             break;
           }
-        } catch (e) {
-          if (!mounted) break;
-          if (persistenceFailed) break;
-          setState(() {
-            messages.add({
-              'type': 'aj',
-              'text': 'संदेश भेजा नहीं जा सका। Queue में सुरक्षित है। Retry बाद में करें।\n\n$e',
-            });
-          });
-          await saveChatState();
-          break;
+
+          if (isFinalAttempt) failedCount++;
         } finally {
           if (mounted) {
             setState(() => isLoading = false);
-            scrollToBottom();
           }
         }
       }
     } finally {
       queueProcessing = false;
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+        scrollToBottom();
+
+        if (storageBlocked) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Chat सुरक्षित सेव नहीं हो सकी। Queue रोक दी गई है। Storage जाँचकर फिर प्रयास करें।',
+              ),
+              duration: Duration(seconds: 6),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (failedCount > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '$failedCount संदेश नहीं भेजे जा सके। वे Failed Queue में सुरक्षित हैं। Retry दबाकर फिर प्रयास करें।',
+              ),
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (deliveredCount > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$deliveredCount संदेश सफलतापूर्वक भेजे गए।'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -1299,7 +1480,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   TextButton.icon(
                     onPressed: (isLoading || queueProcessing)
                         ? null
-                        : processQueue,
+                        : () => processQueue(retryFailed: true),
                     icon: const Icon(Icons.refresh, size: 17),
                     label: const Text('Retry'),
                   ),
