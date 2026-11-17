@@ -66,24 +66,12 @@ Implemented components must be verified against source code and tests. Cloud mem
 Architecture changes are proposals until reviewed and approved. Record material changes with version, reason, impact and date.
 
 ## 11. Update 30 — Privacy-First AI Core Foundation
-- Temporary prototype provider: Google Gemini Free-tier/API access, subject to current account eligibility, quotas and terms.
-- Provider access is isolated behind the Worker AI adapter (`callAiProvider`). Android continues to call the stable `/chat` contract.
+- Temporary prototype provider: Google Gemini; availability and free-tier quotas depend on current account eligibility and terms.
+- Provider access is isolated behind the Worker AI adapter (`callAiProvider`). Android continues to use the stable `/chat` contract.
 - Gemini model fallback is model-level fallback within the same provider, not independent-provider failover.
-- Tavily and third-party search integration are removed from this update; external web search is disabled.
+- Tavily and third-party search integration are removed; external web search is disabled.
 - `GEMINI_API_KEY` remains a server-side secret only. Never place it in Git, APK or client configuration.
-- No sensitive/private personal data should be used during prototype testing because chat prompts are sent to Google Gemini.
-- Self-hosted inference is a planned adapter, not implemented. It requires AJ-controlled compute, deployment, security and operating-cost planning.
+- Do not use sensitive/private personal data during prototype testing because prompts are processed by Google Gemini.
+- Self-hosted inference is planned, not implemented. It requires AJ-controlled compute, deployment, security and operating-cost planning.
 - Memory, authentication hardening, per-user rate limits and durable knowledge storage remain separate planned work.
 - No production Worker deployment is part of this change.
-- Provider: Tavily Search API, Basic depth.
-- Trigger: conservative keyword/phrase detection for latest/current/today/recent requests and explicit Hindi/English search phrases; normal greetings and timeless questions do not call the provider.
-- Endpoint: Worker-side POST to Tavily Search API.
-- Secret: `TAVILY_API_KEY` Cloudflare Worker secret only.
-- Result cap: 5 results; each excerpt is truncated before model context injection.
-- Timeout: 9 seconds; search failure falls back to Gemini-only with status metadata.
-- Validation: only HTTP(S) URLs, duplicate URL removal, title/content bounds.
-- Prompt safety: retrieved pages are untrusted data; instructions inside results must never be followed.
-- Output: `reply`, `sources`, and `webSearchStatus`; readable source URLs are appended to reply for compatibility with the current Android text bubble.
-- Not yet implemented: clickable source cards, durable knowledge ingestion, provider-key rotation UI, robust per-user quota/rate controls.
-- No production Worker deployment is part of this change.
-
