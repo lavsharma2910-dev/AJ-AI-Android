@@ -20,6 +20,9 @@ jobs:
       - name: Check Cloudflare Worker JavaScript syntax
         run: node --input-type=module --check < backend/worker.js
 
+      - name: Test Cloudflare Worker conversation context
+        run: node --test backend/worker.test.js
+
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
