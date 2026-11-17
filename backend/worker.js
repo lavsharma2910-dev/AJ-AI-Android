@@ -68,7 +68,7 @@ export function buildConversationContents(message, rawHistory) {
 }
 
 
-const SEARCH_TRIGGER = /\\b(latest|today|current|now|recent|newest|price today|live rate|this week|2026)\\b|आज|अभी|ताज़ा|ताजा|नवीनतम|लेटेस्ट|वर्तमान|फिलहाल|इस समय|आज का भाव|आज की कीमत|नई जानकारी|इंटरनेट पर खोज|वेब पर खोज|सर्च करो|खोजकर बताओ|अभी कौन|अभी क्या/i;
+const SEARCH_TRIGGER = /\b(latest|today|current|now|recent|newest|price today|live rate|this week|2026)\b|आज|अभी|ताज़ा|ताजा|नवीनतम|लेटेस्ट|वर्तमान|फिलहाल|इस समय|आज का भाव|आज की कीमत|नई जानकारी|इंटरनेट पर खोज|वेब पर खोज|सर्च करो|खोजकर बताओ|अभी कौन|अभी क्या/i;
 
 export function shouldUseWebSearch(message) {
   return typeof message === "string" &&
