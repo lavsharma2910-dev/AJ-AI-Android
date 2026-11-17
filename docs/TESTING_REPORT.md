@@ -51,3 +51,13 @@ Required before release:
 
 ## 7. Test Evidence Policy
 Only mark a test PASSED when its result has been observed and recorded. Keep incomplete tests PARTIAL or PENDING. Update this report after each meaningful test batch.
+
+## 8. Update 30 — Web Knowledge (2026-11-17)
+- Search intent unit tests: added; CI result pending.
+- Tavily result normalization tests: added; CI result pending.
+- Worker syntax check: pending latest workflow.
+- Tavily live API test: PENDING — requires user to configure `TAVILY_API_KEY` as a Cloudflare Worker secret.
+- Search source display on Android: PARTIAL — backend appends source URLs to reply text; dedicated clickable source UI is not yet implemented.
+- Production Worker deployment: NOT PERFORMED.
+- APK build for Update 30: PENDING CI.
+
