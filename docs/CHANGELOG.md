@@ -42,16 +42,8 @@ This file records known project changes. Planned work is not marked as completed
 ## Update 30 — Privacy-First AI Core Foundation (2026-11-17)
 - Replaced direct provider-specific chat orchestration with a backend AI adapter entry point.
 - Kept Gemini as a temporary prototype engine with model-level fallback.
-- Removed Tavily search integration, search triggers, search secrets and third-party web-search calls from Worker source.
-- Explicitly reports external web search as disabled; no live-search capability is claimed.
+- Removed Tavily search integration, search triggers, secrets and third-party web-search calls from Worker source.
+- External web search is explicitly disabled; no live-search capability is claimed.
 - Added tests for provider selection, adapter boundary and conversation context.
 - No production Worker deployment or PR merge performed.
-- Branch: feature/update-30-web-knowledge
-- Added Tavily Basic Search integration to the Cloudflare Worker.
-- Added explicit freshness/search intent detection; ordinary chat does not spend search credits.
-- Added source URL validation, duplicate filtering, result limits and short timeout.
-- Added source links to the AI reply and a structured `sources` response field.
-- Added backend tests for search intent and unsafe/malformed search results.
-- Tavily API key is a Cloudflare Worker secret and is not stored in source or APK.
-- Live provider calls and APK build remain pending CI and secret configuration; no production deployment performed.
-
+- Branch: `feature/update-30-web-knowledge`.
