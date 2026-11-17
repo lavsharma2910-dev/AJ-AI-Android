@@ -38,3 +38,15 @@ This file records known project changes. Planned work is not marked as completed
 - Add entries only after the corresponding change is verified.
 - Include commit hash where available.
 - Keep planned features separate from completed work.
+
+## Update 30 — AJ AI Companion Stabilization (2026-11-17)
+
+- Reframed Update 30 around completing and stabilizing the existing AJ AI Companion app.
+- Gemini remains the temporary prototype engine through the Cloudflare Worker; free-tier quotas and model availability are not guaranteed.
+- Preserved the existing Android `POST /chat` contract and server-side secret requirement.
+- Kept third-party AI/search providers and Tavily out of scope.
+- Deferred AJ Brain, AJ Self Provider, AJ Memory/Knowledge platform and AJ Foundation Model to a separate future development track.
+- GitHub Actions run 44165637617: build job PASSED.
+- Live Gemini API verification and real-device regression remain pending.
+- No Cloudflare production deployment or PR merge performed.
+- Branch: `feature/update-30-web-knowledge`.
