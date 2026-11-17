@@ -143,3 +143,15 @@ A release candidate requires:
 3. Improve backend speed using measured evidence
 4. Complete project documentation
 5. Design and implement Memory Engine
+
+## 11. Update 30 — Live Web Knowledge
+The next AI intelligence layer uses a free-first web research pipeline:
+- Gemini remains the response-generation model.
+- Tavily Basic Search is called only when the latest question signals freshness/current information or explicit web search intent.
+- Search snippets are passed to Gemini as untrusted evidence, never as executable instructions.
+- The model is instructed to cite supplied source numbers and disclose weak or conflicting evidence.
+- Backend responses include structured source metadata and a readable source list.
+- Search credentials stay in Cloudflare Worker secrets; never in Android or Git.
+- The free-tier quota must be monitored; paid overage is not enabled by this implementation.
+- Knowledge Base / RAG remains a separate future component; web search does not silently become permanent memory.
+
