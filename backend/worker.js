@@ -176,13 +176,22 @@ export default {
       history.pop();
     }
 
-    const contents = [
-      ...history,
-      {
+    const contents = [...history];
+    const lastContent = contents[contents.length - 1];
+
+    // Gemini conversation turns should alternate roles. If history ends in a
+    // user turn, append the current input to that turn rather than creating
+    // two adjacent user turns.
+    if (lastContent && lastContent.role === "user") {
+      lastContent.parts[0].text = (
+        lastContent.parts[0].text + "\n\n" + message
+      ).slice(-10000);
+    } else {
+      contents.push({
         role: "user",
         parts: [{ text: message }]
-      }
-    ];
+      });
+    }
 
     // Try primary model, then backup model.
     for (const model of MODELS) {
