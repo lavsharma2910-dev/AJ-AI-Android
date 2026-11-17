@@ -52,12 +52,16 @@ Required before release:
 ## 7. Test Evidence Policy
 Only mark a test PASSED when its result has been observed and recorded. Keep incomplete tests PARTIAL or PENDING. Update this report after each meaningful test batch.
 
-## 8. Update 30 — Privacy-First AI Core Foundation
-- Worker syntax check and backend tests: PENDING latest CI run.
-- Gemini live API response test: PENDING; requires configured server-side `GEMINI_API_KEY`.
-- Provider adapter and model fallback: source implementation present; end-to-end test PENDING.
-- Tavily / external search: intentionally removed from this update.
-- Self-hosted inference: PLANNED; not implemented or deployed.
-- APK build and regression tests: PENDING latest CI run.
-- Production Worker deployment: NOT PERFORMED.
-- Do not use sensitive/private user data in prototype tests.
+## 8. Update 30 — Verification Snapshot (2026-11-17)
+
+- GitHub Actions run 44165637617: PASSED; build job completed successfully.
+- This is CI evidence only. It does not prove live Gemini availability, production Worker behavior or full real-device regression.
+- Live Gemini API request: PENDING; requires server-side `GEMINI_API_KEY` and an authorized test.
+- Gemini model fallback under real quota / error conditions: PENDING.
+- Android chat response parsing against current Worker: PENDING.
+- Queue persistence, retry, offline recovery and duplicate-response regression: PENDING unless separately evidenced above.
+- Security review, authentication and rate limiting: PENDING.
+- Production Cloudflare deployment: NOT PERFORMED.
+- PR merge: NOT PERFORMED.
+- Prototype tests must not use sensitive/private personal data.
+- AJ Brain / AJ Self Provider / AJ Foundation Model: DEFERRED; not part of this test batch.
