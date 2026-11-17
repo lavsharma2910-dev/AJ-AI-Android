@@ -43,6 +43,58 @@ void main() {
       expect(restored.status, 'pending');
     });
 
+    test('restores processing and failed statuses', () {
+      final processing = PendingChatMessage.fromJson({
+        'id': 'request-processing',
+        'text': 'Processing',
+        'createdAt': '2026-11-16T10:00:00Z',
+        'retryCount': 2,
+        'status': 'processing',
+      });
+      final failed = PendingChatMessage.fromJson({
+        'id': 'request-failed',
+        'text': 'Failed',
+        'createdAt': '2026-11-16T10:00:00Z',
+        'retryCount': 3,
+        'status': 'failed',
+      });
+
+      expect(processing.status, 'processing');
+      expect(processing.retryCount, 2);
+      expect(failed.status, 'failed');
+      expect(failed.retryCount, 3);
+    });
+
+    test('normalizes unknown status and negative retry count', () {
+      final message = PendingChatMessage.fromJson({
+        'id': 'request-invalid-state',
+        'text': 'State test',
+        'retryCount': -4,
+        'status': 'unknown',
+      });
+
+      expect(message.status, 'pending');
+      expect(message.retryCount, 0);
+    });
+
+    test('copyWith updates retry state without changing identity', () {
+      final original = PendingChatMessage(
+        id: 'stable-request',
+        text: 'Retry me',
+        createdAt: DateTime.utc(2026, 11, 16),
+      );
+
+      final retried = original.copyWith(
+        status: 'processing',
+        retryCount: 1,
+      );
+
+      expect(retried.id, original.id);
+      expect(retried.text, original.text);
+      expect(retried.status, 'processing');
+      expect(retried.retryCount, 1);
+    });
+
     test('rejects empty message text', () {
       expect(
         () => PendingChatMessage.fromJson({'text': '   '}),

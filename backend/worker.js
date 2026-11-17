@@ -18,6 +18,55 @@ const MODELS = [
   "gemini-3.5-flash-lite"
 ];
 
+// Build a valid Gemini turn sequence and include the current message once.
+export function buildConversationContents(message, rawHistory) {
+  const historyItems = Array.isArray(rawHistory)
+    ? rawHistory.slice(-12)
+    : [];
+
+  const history = [];
+  for (const item of historyItems) {
+    if (!item ||
+        !["user", "model"].includes(item.role) ||
+        typeof item.text !== "string") {
+      continue;
+    }
+
+    const text = item.text.trim().slice(0, 4000);
+    if (!text) continue;
+
+    const previous = history[history.length - 1];
+    if (previous && previous.role === item.role) {
+      previous.parts[0].text = (
+        previous.parts[0].text + "\n\n" + text
+      ).slice(-8000);
+    } else {
+      history.push({
+        role: item.role,
+        parts: [{ text }]
+      });
+    }
+  }
+
+  // A trailing user turn is either an accidental copy of this request or an
+  // unanswered old request. Drop it; never blend it into the new question.
+  const lastTurn = history[history.length - 1];
+  if (lastTurn && lastTurn.role === "user") {
+    history.pop();
+  }
+
+  history.splice(0, history.findIndex(turn => turn.role === "user") < 0
+    ? history.length
+    : history.findIndex(turn => turn.role === "user"));
+
+  history.push({
+    role: "user",
+    parts: [{ text: message }]
+  });
+
+  return history;
+}
+
 async function callGemini(model, contents, apiKey) {
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -35,7 +84,21 @@ async function callGemini(model, contents, apiKey) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: "You are AJ, a friendly and helpful AI companion. Understand Hindi, Hinglish and English. Reply naturally in the user's language. Be honest, safe and practical."
+              text: [
+                "You are AJ, a helpful personal AI companion.",
+                "Follow the language and script explicitly requested in the latest user message. If the user says Hindi, reply in natural Hindi using Devanagari script; if the user writes Roman Hindi without requesting a script, natural Hinglish is acceptable. Use English when requested or clearly preferred.",
+                "Treat the conversation history only as context. NEVER copy, quote, list, or replay the previous conversation unless the user explicitly asks for a transcript or summary.",
+                "Answer only the user's latest message directly. Do not answer an earlier question again when a newer question is being asked.",
+                "Do not repeat your greeting, introduction, or request for the user's name in every reply. Ask for a missing detail only when it is necessary.",
+                "Do not claim to remember a name, preference, event, or personal fact unless it is present in the supplied conversation or trusted memory context.",
+                "If the user asks whether you remember something and it is not in the available context, say honestly that it is not available. Do not imply that temporary chat context is permanent memory.",
+                "Use earlier messages to resolve references, but mention only the relevant detail; do not dump the history.",
+                "Default to concise, practical answers. Give detail only when the user asks for it or the task genuinely needs it. Avoid repeating the same point in different words.",
+                "When the user asks for a website, app, or other code but has not specified its purpose or type, ask one short clarifying question before generating a large solution. If they explicitly ask for a simple example, provide a clearly labelled starter example.",
+                "When generating code, state the file name and where it goes, provide complete runnable code when requested, and do not claim it was tested unless it actually was.",
+                "When the user asks for step-by-step help, give one clear step at a time and use beginner-friendly explanations.",
+                "Never invent completed actions, test results, persistent memory, or access to external accounts."
+              ].join(" ")
             }]
           },
           contents,
@@ -129,26 +192,7 @@ export default {
       }, 400);
     }
 
-    const history = Array.isArray(body.history)
-      ? body.history.slice(-12)
-          .filter(item =>
-            item &&
-            ["user", "model"].includes(item.role) &&
-            typeof item.text === "string"
-          )
-          .map(item => ({
-            role: item.role,
-            parts: [{ text: item.text.slice(0, 4000) }]
-          }))
-      : [];
-
-    const contents = [
-      ...history,
-      {
-        role: "user",
-        parts: [{ text: message }]
-      }
-    ];
+    const contents = buildConversationContents(message, body.history);
 
     // Try primary model, then backup model.
     for (const model of MODELS) {
