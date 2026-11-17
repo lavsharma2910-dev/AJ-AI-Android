@@ -58,11 +58,16 @@ Latest queue commit: a636ab2
 
 Note: IMPLEMENTED does not automatically mean release-ready. Testing evidence is required before release approval.
 
-## 7. Update 30 — Privacy-First AI Core Foundation
-- Gemini prototype adapter in Worker source — IMPLEMENTED; live API test PENDING.
-- Provider-neutral adapter entry point and stable `/chat` response contract — IMPLEMENTED.
-- Gemini model-level fallback — IMPLEMENTED in source; end-to-end verification PENDING.
-- Tavily / third-party web search — NOT INCLUDED; disabled for privacy.
-- Self-hosted AJ inference adapter — PLANNED, not implemented.
-- Sensitive-data-safe prototype testing — REQUIRED.
+## 7. Update 30 — Current Scope
+
+- Gemini temporary prototype integration in Worker — IMPLEMENTED IN SOURCE; live API test PENDING.
+- Existing Android `POST /chat` contract — PRESERVE; end-to-end compatibility test PENDING.
+- Backend model-level fallback — IMPLEMENTED IN SOURCE; live fallback verification PENDING.
+- GitHub Actions build run 44165637617 — PASSED.
+- Gemini free-tier access — SUBJECT TO Google model availability, account eligibility and quotas.
+- Additional AI providers / Tavily / third-party search — NOT INCLUDED.
+- AJ Brain — DEFERRED FUTURE TRACK.
+- AJ Self Provider and self-hosted inference — DEFERRED FUTURE TRACK.
+- AJ Memory / Knowledge platform — separate planned work; not implied complete.
+- AJ fine-tuned / Foundation Model — LONG-TERM FUTURE TRACK.
 - Cloudflare deployment — NOT PERFORMED; explicit approval required.
