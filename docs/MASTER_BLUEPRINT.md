@@ -144,10 +144,31 @@ A release candidate requires:
 4. Complete project documentation
 5. Design and implement Memory Engine
 
-## 11. Update 30 — Privacy-First AI Core Foundation
-- Gemini is a temporary prototype engine for functional testing; provider access is isolated behind a backend adapter.
-- No Tavily or other third-party search provider is included. Live web search is disabled in this update.
-- The Android `/chat` contract remains stable so a future AJ-owned/self-hosted model can replace the prototype provider.
-- Model fallback currently means trying another Gemini model, not switching to an independent AI company.
-- Private or sensitive data must not be used in prototype tests because prompts are processed by Google Gemini.
-- Future self-hosted inference, AJ-controlled memory, knowledge ingestion and privacy controls remain planned and require separate implementation and verification.
+## 11. Update 30 — AJ AI Companion Stabilization (Gemini Prototype)
+
+Current objective: finish and stabilize the existing AJ AI Companion app before beginning the independent AJ Brain / AJ Self Provider program.
+
+In scope:
+- Keep Google Gemini API as the temporary prototype AI engine, accessed only from the Cloudflare Worker.
+- Preserve the existing Android `POST /chat` integration contract.
+- Keep API keys server-side in Cloudflare secrets; never include them in Git or APK.
+- Continue Android chat, queue/retry, local history, and backend reliability work.
+- Test model availability, quota handling, latency, failure recovery and Android response parsing.
+- Do not send sensitive/private personal data during Gemini prototype testing.
+- Do not add Tavily or any other third-party AI/search provider in this update.
+- Web research remains out of scope until a privacy-approved approach is explicitly selected.
+
+Deferred Future Track (separate project; not part of current app update):
+- AJ AI Brain and orchestration engine
+- AJ-owned Provider API and self-hosted inference
+- AJ-controlled Memory / Knowledge platform
+- AJ fine-tuned model and future AJ Foundation Model
+
+The Future Track must not delay or destabilize the current Companion app. Integration is considered only after the independent system is implemented, security-reviewed and fully tested, followed by explicit user approval.
+
+## 12. Update 30 Verification
+- GitHub Actions run 44165637617: PASSED (build job completed successfully).
+- This CI result confirms the workflow run only; it does not prove live Gemini API access or real-device regression.
+- Live Gemini API test: PENDING; requires configured server-side `GEMINI_API_KEY`.
+- Cloudflare production deployment: NOT PERFORMED.
+- PR merge: NOT PERFORMED.
