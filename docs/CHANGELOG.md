@@ -38,3 +38,14 @@ This file records known project changes. Planned work is not marked as completed
 - Add entries only after the corresponding change is verified.
 - Include commit hash where available.
 - Keep planned features separate from completed work.
+
+## Update 30 — Live Web Knowledge (2026-11-17)
+- Branch: feature/update-30-web-knowledge
+- Added Tavily Basic Search integration to the Cloudflare Worker.
+- Added explicit freshness/search intent detection; ordinary chat does not spend search credits.
+- Added source URL validation, duplicate filtering, result limits and short timeout.
+- Added source links to the AI reply and a structured `sources` response field.
+- Added backend tests for search intent and unsafe/malformed search results.
+- Tavily API key is a Cloudflare Worker secret and is not stored in source or APK.
+- Live provider calls and APK build remain pending CI and secret configuration; no production deployment performed.
+
