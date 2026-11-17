@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildConversationContents, shouldUseWebSearch, normalizeTavilyResults } from "./worker.js";
+import { buildConversationContents, shouldUseWebSearch, normalizeTavilyResults, classifyTavilyError } from "./worker.js";
 
 test("keeps valid alternating context and appends the current message once", () => {
   const result = buildConversationContents("What about pricing?", [
@@ -90,3 +90,12 @@ test("handles malformed Tavily payload safely", () => {
   assert.deepEqual(normalizeTavilyResults({ results: "invalid" }), []);
   assert.deepEqual(normalizeTavilyResults({ results: [null, {}, { url: "not-a-url" }] }), []);
 });
+
+test("maps Tavily quota, rate-limit and authentication errors to safe failover states", () => {
+  assert.equal(classifyTavilyError(432), "quota_exhausted");
+  assert.equal(classifyTavilyError(433), "quota_exhausted");
+  assert.equal(classifyTavilyError(429), "rate_limited");
+  assert.equal(classifyTavilyError(401), "invalid_api_key");
+  assert.equal(classifyTavilyError(503), "provider_error");
+});
+
