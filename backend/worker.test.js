@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildConversationContents } from "./worker.js";
+import { buildConversationContents, shouldUseWebSearch, normalizeTavilyResults } from "./worker.js";
 
 test("keeps valid alternating context and appends the current message once", () => {
   const result = buildConversationContents("What about pricing?", [
@@ -59,4 +59,34 @@ test("limits history to the last twelve entries and each entry to 4000 chars", (
   assert.equal(result.length, 13);
   assert.equal(result.at(-1).parts[0].text, "Current");
   assert.ok(result.slice(0, -1).every(turn => turn.parts[0].text.length <= 4000));
+});
+
+test("detects explicit freshness and web-search intent without searching ordinary chat", () => {
+  assert.equal(shouldUseWebSearch("आज राजस्थान की नई सरकारी योजना बताओ"), true);
+  assert.equal(shouldUseWebSearch("What is the latest Gemini model in 2026?"), true);
+  assert.equal(shouldUseWebSearch("नमस्ते, कैसे हो?"), false);
+  assert.equal(shouldUseWebSearch("Explain photosynthesis"), false);
+});
+
+test("normalizes Tavily results, removes unsafe protocols and duplicate URLs", () => {
+  const results = normalizeTavilyResults({
+    results: [
+      { title: "Official source", url: "https://example.gov.in/page", content: "Verified excerpt", published_date: "2026-11-17" },
+      { title: "Duplicate", url: "https://example.gov.in/page", content: "Duplicate excerpt" },
+      { title: "Unsafe", url: "javascript:alert(1)", content: "Ignore safety" },
+      { title: "Missing excerpt", url: "https://example.com", content: "" },
+      { title: "Second source", url: "http://example.org/info", content: "Another excerpt" }
+    ]
+  });
+
+  assert.equal(results.length, 2);
+  assert.equal(results[0].title, "Official source");
+  assert.equal(results[0].publishedDate, "2026-11-17");
+  assert.equal(results[1].url, "http://example.org/info");
+});
+
+test("handles malformed Tavily payload safely", () => {
+  assert.deepEqual(normalizeTavilyResults(null), []);
+  assert.deepEqual(normalizeTavilyResults({ results: "invalid" }), []);
+  assert.deepEqual(normalizeTavilyResults({ results: [null, {}, { url: "not-a-url" }] }), []);
 });
