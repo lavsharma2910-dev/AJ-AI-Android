@@ -144,7 +144,13 @@ A release candidate requires:
 4. Complete project documentation
 5. Design and implement Memory Engine
 
-## 11. Update 30 — Live Web Knowledge
+## 11. Update 30 — Privacy-First AI Core Foundation
+- Gemini is a temporary prototype engine for functional testing only; provider access is isolated behind a backend adapter.
+- No Tavily or other third-party search provider is included. Live web search is disabled in this update.
+- The Android `/chat` contract remains stable so a future AJ-owned/self-hosted model can replace the prototype provider.
+- Model fallback currently means trying another Gemini model, not switching to an independent AI company.
+- Private or sensitive data must not be used in prototype tests because prompts are processed by Google Gemini.
+- Future self-hosted inference, AJ-controlled memory, knowledge ingestion and privacy controls remain planned and require separate implementation and verification.
 The next AI intelligence layer uses a free-first web research pipeline:
 - Gemini remains the response-generation model.
 - Tavily Basic Search is called only when the latest question signals freshness/current information or explicit web search intent.
