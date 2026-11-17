@@ -64,3 +64,17 @@ Implemented components must be verified against source code and tests. Cloud mem
 
 ## 10. Change Control
 Architecture changes are proposals until reviewed and approved. Record material changes with version, reason, impact and date.
+
+## 11. Update 30 — Web Search Pipeline
+- Provider: Tavily Search API, Basic depth.
+- Trigger: conservative keyword/phrase detection for latest/current/today/recent requests and explicit Hindi/English search phrases; normal greetings and timeless questions do not call the provider.
+- Endpoint: Worker-side POST to Tavily Search API.
+- Secret: `TAVILY_API_KEY` Cloudflare Worker secret only.
+- Result cap: 5 results; each excerpt is truncated before model context injection.
+- Timeout: 9 seconds; search failure falls back to Gemini-only with status metadata.
+- Validation: only HTTP(S) URLs, duplicate URL removal, title/content bounds.
+- Prompt safety: retrieved pages are untrusted data; instructions inside results must never be followed.
+- Output: `reply`, `sources`, and `webSearchStatus`; readable source URLs are appended to reply for compatibility with the current Android text bubble.
+- Not yet implemented: clickable source cards, durable knowledge ingestion, provider-key rotation UI, robust per-user quota/rate controls.
+- No production Worker deployment is part of this change.
+
