@@ -18,6 +18,55 @@ const MODELS = [
   "gemini-3.5-flash-lite"
 ];
 
+// Build a valid Gemini turn sequence and include the current message once.
+export function buildConversationContents(message, rawHistory) {
+  const historyItems = Array.isArray(rawHistory)
+    ? rawHistory.slice(-12)
+    : [];
+
+  const history = [];
+  for (const item of historyItems) {
+    if (!item ||
+        !["user", "model"].includes(item.role) ||
+        typeof item.text !== "string") {
+      continue;
+    }
+
+    const text = item.text.trim().slice(0, 4000);
+    if (!text) continue;
+
+    const previous = history[history.length - 1];
+    if (previous && previous.role === item.role) {
+      previous.parts[0].text = (
+        previous.parts[0].text + "\\n\\n" + text
+      ).slice(-8000);
+    } else {
+      history.push({
+        role: item.role,
+        parts: [{ text }]
+      });
+    }
+  }
+
+  // A trailing user turn is either an accidental copy of this request or an
+  // unanswered old request. Drop it; never blend it into the new question.
+  const lastTurn = history[history.length - 1];
+  if (lastTurn && lastTurn.role === "user") {
+    history.pop();
+  }
+
+  history.splice(0, history.findIndex(turn => turn.role === "user") < 0
+    ? history.length
+    : history.findIndex(turn => turn.role === "user"));
+
+  history.push({
+    role: "user",
+    parts: [{ text: message }]
+  });
+
+  return history;
+}
+
 async function callGemini(model, contents, apiKey) {
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -139,59 +188,7 @@ export default {
       }, 400);
     }
 
-    const rawHistory = Array.isArray(body.history)
-      ? body.history.slice(-12)
-      : [];
-
-    // Validate turns and merge adjacent messages with the same role.
-    const history = [];
-    for (const item of rawHistory) {
-      if (!item ||
-          !["user", "model"].includes(item.role) ||
-          typeof item.text !== "string") {
-        continue;
-      }
-
-      const text = item.text.trim().slice(0, 4000);
-      if (!text) continue;
-
-      const previous = history[history.length - 1];
-      if (previous && previous.role === item.role) {
-        previous.parts[0].text = (
-          previous.parts[0].text + "\n\n" + text
-        ).slice(-8000);
-      } else {
-        history.push({
-          role: item.role,
-          parts: [{ text }]
-        });
-      }
-    }
-
-    // Append the current message exactly once.
-    const lastTurn = history[history.length - 1];
-    if (lastTurn &&
-        lastTurn.role === "user" &&
-        lastTurn.parts[0].text.trim() === message) {
-      history.pop();
-    }
-
-    const contents = [...history];
-    const lastContent = contents[contents.length - 1];
-
-    // Gemini conversation turns should alternate roles. If history ends in a
-    // user turn, append the current input to that turn rather than creating
-    // two adjacent user turns.
-    if (lastContent && lastContent.role === "user") {
-      lastContent.parts[0].text = (
-        lastContent.parts[0].text + "\n\n" + message
-      ).slice(-10000);
-    } else {
-      contents.push({
-        role: "user",
-        parts: [{ text: message }]
-      });
-    }
+    const contents = buildConversationContents(message, body.history);
 
     // Try primary model, then backup model.
     for (const model of MODELS) {
