@@ -65,13 +65,20 @@ Implemented components must be verified against source code and tests. Cloud mem
 ## 10. Change Control
 Architecture changes are proposals until reviewed and approved. Record material changes with version, reason, impact and date.
 
-## 11. Update 30 — Privacy-First AI Core Foundation
-- Temporary prototype provider: Google Gemini; availability and free-tier quotas depend on current account eligibility and terms.
-- Provider access is isolated behind the Worker AI adapter (`callAiProvider`). Android continues to use the stable `/chat` contract.
-- Gemini model fallback is model-level fallback within the same provider, not independent-provider failover.
-- Tavily and third-party search integration are removed; external web search is disabled.
-- `GEMINI_API_KEY` remains a server-side secret only. Never place it in Git, APK or client configuration.
-- Do not use sensitive/private personal data during prototype testing because prompts are processed by Google Gemini.
-- Self-hosted inference is planned, not implemented. It requires AJ-controlled compute, deployment, security and operating-cost planning.
-- Memory, authentication hardening, per-user rate limits and durable knowledge storage remain separate planned work.
-- No production Worker deployment is part of this change.
+## 11. Update 30 — Current App First
+
+- Current app remains a Flutter Android client connected to the Cloudflare Worker.
+- Gemini is the temporary prototype provider. Model access and free-tier quotas are subject to Google AI Studio / Gemini API eligibility, model availability and rate limits.
+- Gemini credentials remain server-side only as `GEMINI_API_KEY`; no key in APK or repository.
+- Preserve the existing `POST /chat` response contract while improving Android integration and backend reliability.
+- No additional AI provider or third-party search provider is introduced.
+- No external web-search integration is included in this update.
+- Prototype requests must not contain sensitive/private personal data.
+- CI success does not replace live API, device, security or regression testing.
+
+## 12. Deferred Independent AJ AI Track (Not in Update 30)
+- AJ Brain: reasoning, planning, context, tools and orchestration.
+- AJ Provider: AJ-owned API gateway and self-hosted model serving.
+- AJ Memory / Knowledge: consent-based storage, retrieval and user controls.
+- AJ Model: open-weight model evaluation, fine-tuning, and later foundation-model research.
+- This track remains separate until the current Companion app is complete and stable. No integration or deployment without a later explicit approval.
