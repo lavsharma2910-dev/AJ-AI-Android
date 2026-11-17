@@ -53,7 +53,7 @@ Required before release:
 Only mark a test PASSED when its result has been observed and recorded. Keep incomplete tests PARTIAL or PENDING. Update this report after each meaningful test batch.
 
 ## 8. Update 30 — Web Knowledge (2026-11-17)
-- Search intent unit tests: added; CI result pending.
+- Search intent unit tests: added; first CI run exposed an escaping defect in the English word-boundary regex; source corrected in commit 2728a3a; rerun pending.
 - Tavily result normalization tests: added; CI result pending.
 - Worker syntax check: pending latest workflow.
 - Tavily live API test: PENDING — requires user to configure `TAVILY_API_KEY` as a Cloudflare Worker secret.
