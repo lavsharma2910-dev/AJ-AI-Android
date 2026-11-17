@@ -4,7 +4,7 @@ name: Build AJ AI APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, fix/chat-queue-reliability]
+    branches: [main, fix/chat-queue-reliability, fix/ai-context-response-quality]
 
 permissions:
   contents: read
@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check Cloudflare Worker JavaScript syntax
+        run: node --input-type=module --check < backend/worker.js
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
