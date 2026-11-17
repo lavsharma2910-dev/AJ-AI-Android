@@ -58,7 +58,14 @@ Latest queue commit: a636ab2
 
 Note: IMPLEMENTED does not automatically mean release-ready. Testing evidence is required before release approval.
 
-## 7. Update 30 — Live Web Knowledge
+## 7. Update 30 — Privacy-First AI Core Foundation
+- Gemini prototype adapter in Worker source — IMPLEMENTED; live API test PENDING.
+- Provider-neutral adapter entry point and stable `/chat` response contract — IMPLEMENTED.
+- Gemini model-level fallback — IMPLEMENTED in source; end-to-end verification PENDING.
+- Tavily / third-party web search — NOT INCLUDED; disabled for privacy.
+- Self-hosted AJ inference adapter — PLANNED, not implemented.
+- Sensitive-data-safe prototype testing — REQUIRED.
+- Cloudflare deployment — NOT PERFORMED; explicit approval required.
 - Tavily Basic Search integration in Worker source — IMPLEMENTED (provider key setup and live verification pending)
 - Search only for freshness/current-information intent — IMPLEMENTED
 - Search result URL validation and duplicate filtering — IMPLEMENTED
