@@ -57,3 +57,14 @@ Latest queue commit: a636ab2
 - APK size and performance report — PLANNED
 
 Note: IMPLEMENTED does not automatically mean release-ready. Testing evidence is required before release approval.
+
+## 7. Update 30 — Live Web Knowledge
+- Tavily Basic Search integration in Worker source — IMPLEMENTED (provider key setup and live verification pending)
+- Search only for freshness/current-information intent — IMPLEMENTED
+- Search result URL validation and duplicate filtering — IMPLEMENTED
+- AI source citations and structured sources response — IMPLEMENTED in backend response
+- Tavily secret configuration in Cloudflare — PENDING
+- Live search end-to-end test — PENDING
+- Clickable source UI in Android — PLANNED
+- Search usage monitoring and abuse protection — PENDING
+
