@@ -60,12 +60,4 @@ Only mark a test PASSED when its result has been observed and recorded. Keep inc
 - Self-hosted inference: PLANNED; not implemented or deployed.
 - APK build and regression tests: PENDING latest CI run.
 - Production Worker deployment: NOT PERFORMED.
-- Do not use sensitive/private user data in prototype tests. (2026-11-17)
-- Search intent unit tests: added; first CI run exposed an escaping defect in the English word-boundary regex; source corrected in commit 2728a3a; rerun pending.
-- Tavily result normalization tests: added; CI result pending.
-- Worker syntax check: pending latest workflow.
-- Tavily live API test: PENDING — requires user to configure `TAVILY_API_KEY` as a Cloudflare Worker secret.
-- Search source display on Android: PARTIAL — backend appends source URLs to reply text; dedicated clickable source UI is not yet implemented.
-- Production Worker deployment: NOT PERFORMED.
-- APK build for Update 30: PENDING CI.
-
+- Do not use sensitive/private user data in prototype tests.
