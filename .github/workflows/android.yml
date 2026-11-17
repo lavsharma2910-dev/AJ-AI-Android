@@ -1,3 +1,4 @@
+
 name: Build AJ AI APK
 
 on:
@@ -26,7 +27,72 @@ jobs:
 
       - name: Add Internet Permission
         run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          content = path.read_text()
+          permission = '<uses-permission android:name="android.permission.INTERNET"/>'
+
+          if permission not in content:
+              content = content.replace(
+                  '<application',
+                  permission + '\n    <application',
+                  1
+              )
+              path.write_text(content)
+          PY
+
+      - name: Add Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON secret is missing"
+            exit 1
+          fi
+
+          mkdir -p android/app
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          python3 -m json.tool android/app/google-services.json > /dev/null
+
+      - name: Configure Google Services Gradle Plugin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("android/build.gradle.kts")
+          app = Path("android/app/build.gradle.kts")
+
+          if not root.exists() or not app.exists():
+              raise SystemExit("Expected Gradle Kotlin files were not generated")
+
+          root_text = root.read_text()
+          root_plugin = 'id("com.google.gms.google-services") version "4.6.0" apply false'
+
+          if "com.google.gms.google-services" not in root_text:
+              match = re.search(r'plugins\s*\{', root_text)
+              if match:
+                  pos = match.end()
+                  root_text = root_text[:pos] + "\n    " + root_plugin + root_text[pos:]
+              else:
+                  root_text = "plugins {\n    " + root_plugin + "\n}\n\n" + root_text
+
+              root.write_text(root_text)
+
+          app_text = app.read_text()
+          app_plugin = 'id("com.google.gms.google-services")'
+
+          if "com.google.gms.google-services" not in app_text:
+              match = re.search(r'plugins\s*\{', app_text)
+              if not match:
+                  raise SystemExit("App Gradle plugins block not found")
+
+              pos = match.end()
+              app_text = app_text[:pos] + "\n    " + app_plugin + app_text[pos:]
+              app.write_text(app_text)
+          PY
 
       - name: Get dependencies
         run: flutter pub get
@@ -36,7 +102,6 @@ jobs:
 
       - name: Run automated tests
         run: flutter test
-
 
       - name: Build APK
         run: flutter build apk --release
