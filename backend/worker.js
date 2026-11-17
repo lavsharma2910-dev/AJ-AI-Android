@@ -76,6 +76,13 @@ export function shouldUseWebSearch(message) {
     message.trim().length >= 5;
 }
 
+export function classifyTavilyError(status) {
+  if ([432, 433].includes(status)) return "quota_exhausted";
+  if (status === 429) return "rate_limited";
+  if (status === 401) return "invalid_api_key";
+  return "provider_error";
+}
+
 export function normalizeTavilyResults(payload) {
   const items = Array.isArray(payload?.results) ? payload.results : [];
   const seen = new Set();
@@ -119,8 +126,14 @@ async function searchWeb(query, apiKey) {
       signal: controller.signal
     });
     if (!res.ok) {
-      console.warn(JSON.stringify({ event: "web_search_failed", status: res.status }));
-      return { ok: false, reason: "provider_error", results: [] };
+      const reason = classifyTavilyError(res.status);
+      console.warn(JSON.stringify({
+        event: "web_search_failed",
+        provider: "tavily",
+        status: res.status,
+        reason
+      }));
+      return { ok: false, reason, results: [] };
     }
     const payload = await res.json();
     const results = normalizeTavilyResults(payload);
