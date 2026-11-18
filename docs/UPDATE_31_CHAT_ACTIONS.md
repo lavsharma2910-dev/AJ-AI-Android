@@ -1,40 +1,48 @@
 # Update 31 — AJ AI Chat Actions
 
-Status: implementation branch created; feature implementation and verification are pending.
+Status: feature implementation is present on the isolated Update 31 branch. Verification is still pending; this update is not ready to merge or distribute as an APK.
 
 ## Scope (only these six chat actions)
 
-1. **New Chat** — start a fresh conversation without silently overwriting the saved conversation.
-2. **Delete** — delete the selected conversation or selected message only after confirmation.
-3. **Save** — persist the current conversation and allow saved conversations to be reopened.
+1. **New Chat** — start a fresh conversation without silently overwriting the previous conversation.
+2. **Delete** — delete the current conversation or selected messages only after confirmation.
+3. **Save** — persist the current conversation locally and allow it to be reopened.
 4. **Share** — share the current conversation or selected messages through the Android share sheet.
-5. **Select** — enter multi-select mode for messages; selected items can be copied, shared, or deleted.
-6. **History** — show saved conversations and reopen one.
+5. **Select** — enter multi-select mode; selected messages can be copied, shared, or deleted.
+6. **History** — list locally stored conversations and reopen one.
 
-## Data and safety requirements
+## Implementation present
 
-- Keep conversation data local to the device in this update.
-- Use stable conversation and message IDs; do not identify messages by list index.
-- Persist changes before reporting success; restore the previous in-memory state if persistence fails.
-- Confirm destructive delete operations.
-- Keep New Chat separate from Delete: starting a new chat must preserve the previous saved conversation.
-- Share only the content the user explicitly selected.
-- Do not send chat contents to a third-party service for save/history/share.
-- Preserve existing chat API request/response behavior and queue handling.
-- No AI-provider, search-provider, Cloudflare Worker, or backend changes in Update 31.
+- Chat action controls are present in the chat AppBar.
+- Local conversation snapshots use SharedPreferences.
+- History sheet and conversation restore flow are implemented.
+- Multi-select UI and copy/share/delete actions are implemented.
+- Android sharing uses `share_plus`.
+- New Chat preserves the previous conversation snapshot before switching.
+- Delete actions request confirmation.
+
+## Known gaps to resolve before sign-off
+
+- Message selection currently uses list indexes, not stable message IDs. Replace this before calling the feature complete.
+- Verify rollback and consistency across all SharedPreferences writes, especially when one write succeeds and a later write fails.
+- Verify restore/migration of existing v2 and legacy chat state, including pending queue behavior.
+- Review current-conversation deletion semantics and ensure the active-chat state cannot accidentally recreate a deleted snapshot.
+- Add focused automated tests for persistence, migration, history restore, selection, and delete rollback.
 
 ## Verification required
 
-- Flutter format/analyze/test and GitHub Actions APK build.
-- Manual Android checks for all six actions.
-- Persistence/restart checks for saved conversations and history.
-- Multi-select checks for selection, deselection, and bulk actions.
-- Share-sheet launch and payload checks.
-- Delete confirmation and rollback-on-storage-failure checks.
+- Run Dart formatting, Flutter analyze, and Flutter tests.
+- Run GitHub Actions Android APK build and inspect the complete job logs.
+- Install the generated APK on Android and manually test all six actions.
+- Restart the app and verify persistence/history.
+- Verify share-sheet payloads and destructive confirmation flows.
+- Confirm pending queue and existing chat API behavior remain unchanged.
 
 ## Change control
 
-- Separate branch: `feature/update-31-chat-actions`
+- Branch: `feature/update-31-chat-actions`
 - Base branch: `main`
+- Draft PR #3: https://github.com/lavsharma2910-dev/AJ-AI-Android/pull/3
 - Update 30 PR #2 remains untouched and draft.
-- Do not merge this PR or deploy Cloudflare Worker without explicit approval.
+- No merge or Cloudflare Worker deployment without explicit approval.
+- Do not describe the APK as ready until a successful artifact is available and its Android install/behavior checks pass.
