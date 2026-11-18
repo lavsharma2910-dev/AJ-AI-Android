@@ -879,8 +879,8 @@ class _ChatScreenState extends State<ChatScreen> {
   String _transcript(Iterable<Map<String, String>> items) =>
       items.map((item) {
         final who = item['type'] == 'user' ? 'आप' : 'AJ AI';
-        return '$who:\\n${item['text'] ?? ''}';
-      }).join('\\n\\n--------------------\\n\\n');
+        return '$who:\n${item['text'] ?? ''}';
+      }).join('\n\n--------------------\n\n');
 
   Future<void> shareText(String text) async {
     if (text.trim().isEmpty) return;
@@ -1018,9 +1018,6 @@ class _ChatScreenState extends State<ChatScreen> {
       for (final item in (state['pendingQueue'] as List? ?? [])) {
         restoredQueue.add(PendingChatMessage.fromJson(item));
       }
-      if (restoredQueue.isNotEmpty) {
-        throw const FormatException('This conversation has pending messages.');
-      }
       setState(() {
         conversationId = (state['conversationId'] ?? DateTime.now().microsecondsSinceEpoch.toString()).toString();
         conversationTitle = (state['title'] ?? 'बातचीत').toString();
@@ -1032,9 +1029,12 @@ class _ChatScreenState extends State<ChatScreen> {
         selectionMode = false;
         selectedMessages.clear();
       });
-      if (!await saveChatState() && mounted) {
+      if (!await saveChatState()) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('चैट लोड हुई, लेकिन सेविंग की पुष्टि नहीं हुई।')));
+      } else if (pendingQueue.isNotEmpty) {
+        processQueue();
       }
       scrollToBottom();
     } catch (e) {
@@ -1069,7 +1069,6 @@ class _ChatScreenState extends State<ChatScreen> {
         const SnackBar(content: Text('Delete सेव नहीं हुआ।')));
       return;
     }
-    final oldMessages = List<Map<String, String>>.from(messages);
     setState(() {
       conversationId = DateTime.now().microsecondsSinceEpoch.toString();
       conversationTitle = 'नई बातचीत';
