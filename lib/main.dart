@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 
 
 
@@ -623,6 +624,14 @@ class _ChatScreenState extends State<ChatScreen> {
   static const chatStateKey = 'aj_ai_chat_state_v2';
   static const historyKey = 'aj_ai_chat_history_v1';
   static const queueKey = 'aj_ai_pending_queue_v1';
+  static const conversationsKey = 'aj_ai_conversations_v1';
+  static const activeConversationKey = 'aj_ai_active_conversation_v1';
+
+  String conversationId = DateTime.now().microsecondsSinceEpoch.toString();
+  String conversationTitle = 'नई बातचीत';
+  bool isSavedConversation = false;
+  bool selectionMode = false;
+  final Set<int> selectedMessages = <int>{};
 
   bool isLoading = false;
   bool historyLoaded = false;
@@ -821,17 +830,309 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<bool> saveChatState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedAt = DateTime.now().toUtc().toIso8601String();
       final state = {
-        'version': 2,
+        'version': 3,
+        'conversationId': conversationId,
+        'title': conversationTitle,
+        'isSaved': isSavedConversation,
         'messages': messages,
         'pendingQueue': pendingQueue.map((item) => item.toJson()).toList(),
-        'savedAt': DateTime.now().toUtc().toIso8601String(),
+        'savedAt': savedAt,
       };
-      return await prefs.setString(chatStateKey, jsonEncode(state));
+      final encoded = jsonEncode(state);
+      final conversations = <Map<String, dynamic>>[];
+      final raw = prefs.getString(conversationsKey);
+      if (raw != null) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final entry in decoded) {
+            if (entry is Map && entry['id'] is String &&
+                entry['id'] != conversationId) {
+              conversations.add(Map<String, dynamic>.from(entry));
+            }
+          }
+        }
+      }
+      conversations.insert(0, {
+        'id': conversationId,
+        'title': conversationTitle,
+        'isSaved': isSavedConversation,
+        'savedAt': savedAt,
+        'messageCount': messages.length,
+        'state': state,
+      });
+      // Keep a bounded local history to prevent unbounded preference growth.
+      final bounded = conversations.take(50).toList();
+      final historySaved = await prefs.setString(
+        conversationsKey, jsonEncode(bounded));
+      if (!historySaved) return false;
+      final activeSaved = await prefs.setString(chatStateKey, encoded);
+      if (!activeSaved) return false;
+      return await prefs.setString(activeConversationKey, conversationId);
     } catch (e) {
       debugPrint('Chat state save error: $e');
       return false;
     }
+  }
+
+  String _transcript(Iterable<Map<String, String>> items) =>
+      items.map((item) {
+        final who = item['type'] == 'user' ? 'आप' : 'AJ AI';
+        return '$who:\n${item['text'] ?? ''}';
+      }).join('\n\n--------------------\n\n');
+
+  Future<void> shareText(String text) async {
+    if (text.trim().isEmpty) return;
+    await Share.share(text, subject: 'AJ AI Chat');
+  }
+
+  Future<void> saveConversation() async {
+    final old = isSavedConversation;
+    setState(() => isSavedConversation = true);
+    if (!await saveChatState()) {
+      if (mounted) setState(() => isSavedConversation = old);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Save नहीं हो पाया; दोबारा प्रयास करें।')));
+      return;
+    }
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('बातचीत Saved History में सुरक्षित है।')));
+  }
+
+  Future<void> newChat() async {
+    if (!historyLoaded || restoreFailed || sendSaving ||
+        queueProcessing || pendingQueue.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('पहले pending messages पूरे होने दें।')));
+      return;
+    }
+    if (messages.length <= 1 && messages.isNotEmpty && messages[0]['type'] == 'aj') return;
+    final ok = await saveChatState();
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('पुरानी चैट सेव नहीं हुई; नई चैट नहीं खोली।')));
+      return;
+    }
+    setState(() {
+      conversationId = DateTime.now().microsecondsSinceEpoch.toString();
+      conversationTitle = 'नई बातचीत';
+      isSavedConversation = false;
+      messages
+        ..clear()
+        ..add({'type': 'aj', 'text': 'नमस्ते! 😊 मैं AJ हूँ। नई बातचीत शुरू करें।'});
+      selectedMessages.clear();
+      selectionMode = false;
+    });
+    if (!await saveChatState() && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('नई चैट सेव नहीं हो सकी।')));
+    }
+    scrollToBottom();
+  }
+
+  Future<void> openHistory() async {
+    if (!historyLoaded || sendSaving || queueProcessing || pendingQueue.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('History खोलने से पहले pending messages पूरे करें।')));
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(conversationsKey);
+    final entries = <Map<String, dynamic>>[];
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is Map && item['state'] is Map) {
+              entries.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('History read error: $e');
+      }
+    }
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: card,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * .7,
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Chat History', style: TextStyle(
+                  fontSize: 19, fontWeight: FontWeight.bold)),
+              ),
+              Expanded(
+                child: entries.isEmpty
+                  ? const Center(child: Text('अभी कोई पुरानी चैट नहीं है।'))
+                  : ListView.builder(
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) {
+                        final entry = entries[index];
+                        final savedState = Map<String, dynamic>.from(entry['state'] as Map);
+                        final title = (entry['title'] ?? 'बातचीत').toString();
+                        final date = (entry['savedAt'] ?? '').toString();
+                        return ListTile(
+                          leading: Icon(
+                            entry['isSaved'] == true ? Icons.bookmark : Icons.chat_bubble_outline,
+                            color: pink),
+                          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text('$date • ${entry['messageCount'] ?? 0} messages',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                          onTap: () async {
+                            Navigator.pop(sheetContext);
+                            await _restoreConversation(savedState);
+                          },
+                        );
+                      },
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _restoreConversation(Map<String, dynamic> state) async {
+    if (!await saveChatState()) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('वर्तमान चैट सेव नहीं हुई; History नहीं बदली।')));
+      return;
+    }
+    try {
+      final restoredMessages = <Map<String, String>>[];
+      final restoredQueue = <PendingChatMessage>[];
+      for (final item in (state['messages'] as List? ?? [])) {
+        if (item is Map && item['type'] is String && item['text'] is String) {
+          restoredMessages.add({'type': item['type'], 'text': item['text']});
+        }
+      }
+      for (final item in (state['pendingQueue'] as List? ?? [])) {
+        restoredQueue.add(PendingChatMessage.fromJson(item));
+      }
+      setState(() {
+        conversationId = (state['conversationId'] ?? DateTime.now().microsecondsSinceEpoch.toString()).toString();
+        conversationTitle = (state['title'] ?? 'बातचीत').toString();
+        isSavedConversation = state['isSaved'] == true;
+        messages
+          ..clear()
+          ..addAll(restoredMessages);
+        pendingQueue.clear();
+        selectionMode = false;
+        selectedMessages.clear();
+      });
+      if (!await saveChatState()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('चैट लोड हुई, लेकिन सेविंग की पुष्टि नहीं हुई।')));
+      } else if (pendingQueue.isNotEmpty) {
+        processQueue();
+      }
+      scrollToBottom();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('History restore नहीं हुई: $e')));
+    }
+  }
+
+  Future<void> deleteConversation() async {
+    if (pendingQueue.isNotEmpty || queueProcessing || sendSaving) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: card,
+        title: const Text('Delete conversation?'),
+        content: const Text('यह बातचीत History से स्थायी रूप से हट जाएगी।'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('रद्द करें')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(conversationsKey);
+    final entries = raw == null ? <dynamic>[] : (jsonDecode(raw) as List);
+    final filtered = entries.where((e) => e is! Map || e['id'] != conversationId).toList();
+    if (!await prefs.setString(conversationsKey, jsonEncode(filtered))) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Delete सेव नहीं हुआ।')));
+      return;
+    }
+    setState(() {
+      conversationId = DateTime.now().microsecondsSinceEpoch.toString();
+      conversationTitle = 'नई बातचीत';
+      isSavedConversation = false;
+      messages
+        ..clear()
+        ..add({'type': 'aj', 'text': 'नमस्ते! 😊 मैं AJ हूँ।'});
+      selectedMessages.clear();
+      selectionMode = false;
+    });
+    await saveChatState();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('बातचीत Delete कर दी गई।')));
+  }
+
+  void toggleMessageSelection(int index) {
+    setState(() {
+      selectionMode = true;
+      if (!selectedMessages.add(index)) selectedMessages.remove(index);
+      if (selectedMessages.isEmpty) selectionMode = false;
+    });
+  }
+
+  Future<void> performSelectedAction(String action) async {
+    final indexes = selectedMessages.toList()..sort();
+    final selected = indexes.where((i) => i >= 0 && i < messages.length)
+        .map((i) => Map<String, String>.from(messages[i])).toList();
+    if (selected.isEmpty) return;
+    if (action == 'copy') {
+      await Clipboard.setData(ClipboardData(text: _transcript(selected)));
+    } else if (action == 'share') {
+      await shareText(_transcript(selected));
+    } else if (action == 'delete') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: card,
+          title: const Text('Delete selected messages?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('रद्द करें')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Delete')),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+      final old = List<Map<String, String>>.from(messages);
+      for (final i in indexes.reversed) {
+        if (i >= 0 && i < messages.length) messages.removeAt(i);
+      }
+      if (!await saveChatState()) {
+        setState(() => messages
+          ..clear()
+          ..addAll(old));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Delete सेव नहीं हुआ; messages वापस रखे गए।')));
+        return;
+      }
+    }
+    if (mounted) setState(() {
+      selectedMessages.clear();
+      selectionMode = false;
+    });
   }
 
   Future<void> processQueue() async {
@@ -1147,30 +1448,21 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Copy All',
-            onPressed: messages.isEmpty ? null : copyConversation,
-            icon: const Icon(Icons.copy_all_rounded),
-          ),
-          IconButton(
-            tooltip: 'View / Select All',
-            onPressed: messages.isEmpty ? null : showConversation,
-            icon: const Icon(Icons.select_all_rounded),
-          ),
-          IconButton(
-            tooltip: 'Clear Chat',
-            onPressed: (!historyLoaded ||
-                    restoreFailed ||
-                    sendSaving ||
-                    isLoading ||
-                    queueProcessing ||
-                    pendingQueue.isNotEmpty)
-                ? null
-                : clearChat,
-            icon: const Icon(Icons.delete_outline),
-          ),
-        ],
+        actions: selectionMode
+          ? [
+              IconButton(tooltip: 'Copy selected', onPressed: () => performSelectedAction('copy'), icon: const Icon(Icons.copy)),
+              IconButton(tooltip: 'Share selected', onPressed: () => performSelectedAction('share'), icon: const Icon(Icons.share)),
+              IconButton(tooltip: 'Delete selected', onPressed: () => performSelectedAction('delete'), icon: const Icon(Icons.delete_outline)),
+              IconButton(tooltip: 'Cancel selection', onPressed: () => setState(() { selectionMode = false; selectedMessages.clear(); }), icon: const Icon(Icons.close)),
+            ]
+          : [
+              IconButton(tooltip: 'New Chat', onPressed: newChat, icon: const Icon(Icons.add_comment_outlined)),
+              IconButton(tooltip: 'History', onPressed: openHistory, icon: const Icon(Icons.history)),
+              IconButton(tooltip: 'Save', onPressed: saveConversation, icon: Icon(isSavedConversation ? Icons.bookmark : Icons.bookmark_border)),
+              IconButton(tooltip: 'Share', onPressed: () => shareText(_transcript(messages)), icon: const Icon(Icons.share)),
+              IconButton(tooltip: 'Select', onPressed: () => setState(() => selectionMode = true), icon: const Icon(Icons.checklist)),
+              IconButton(tooltip: 'Delete', onPressed: deleteConversation, icon: const Icon(Icons.delete_outline)),
+            ],
       ),
       body: Column(
         children: [
@@ -1230,8 +1522,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       final item = messages[index];
                       final isUser = item['type'] == 'user';
                       final messageText = item['text'] ?? '';
+                      final isSelected = selectedMessages.contains(index);
 
-                      return Align(
+                      return GestureDetector(
+                        onLongPress: () => toggleMessageSelection(index),
+                        child: Align(
                         alignment: isUser
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
@@ -1243,6 +1538,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: isUser
                                 ? const Color(0xFF6344A5)
                                 : card,
+                            border: isSelected ? Border.all(color: pink, width: 2) : null,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(19),
                               topRight: const Radius.circular(19),
@@ -1260,6 +1556,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   height: 1.4,
                                 ),
                               ),
+                              if (selectionMode)
+                                Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) => toggleMessageSelection(index),
+                                  activeColor: pink,
+                                ),
                               IconButton(
                                 visualDensity: VisualDensity.compact,
                                 constraints: const BoxConstraints(
@@ -1278,7 +1580,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-                      );
+                      ),
+                    );
                     },
                   ),
           ),
