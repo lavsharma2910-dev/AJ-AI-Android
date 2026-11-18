@@ -907,7 +907,7 @@ class _ChatScreenState extends State<ChatScreen> {
         const SnackBar(content: Text('पहले pending messages पूरे होने दें।')));
       return;
     }
-    if (messages.length <= 1 && messages.firstOrNull?['type'] == 'aj') return;
+    if (messages.length <= 1 && messages.isNotEmpty && messages[0]['type'] == 'aj') return;
     final ok = await saveChatState();
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1539,6 +1539,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: isUser
                                 ? const Color(0xFF6344A5)
                                 : card,
+                            border: isSelected ? Border.all(color: pink, width: 2) : null,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(19),
                               topRight: const Radius.circular(19),
@@ -1580,7 +1581,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-                      );
+                      ),
+                    );
                     },
                   ),
           ),
