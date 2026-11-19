@@ -13,17 +13,32 @@ Status: Development plan recorded; implementation and verification are pending.
 - Correct product identity: AJ is the AI of AJ SOFTWARE LABS; never claim Google created AJ.
 - Improve chat history, queue recovery, and user-facing guidance.
 - Redesign the home experience around a customizable holographic AI Core (no human/avatar illustration).
-- Add Welcome / Explore preview, signup and login foundations, subject to an authentication design review.
+- Add a Welcome / Explore experience with guest-first access and optional account creation/login.
 - Add integrated voice entry points in AI Chat, Message, and AI Hub, with feasibility and provider review before implementation.
 
-## 2. Home and navigation design
+## 2. Welcome, Guest Mode, accounts, home and navigation
+### Guest-first access (approved)
+- AJ AI should open for new users without forcing account creation or login.
+- Welcome page offers three clear choices: Continue as Guest, Create Account, and Login.
+- Guest users can try AI Chat and voice experience within reasonable usage limits, and explore the dashboard/features preview.
+- Guest chat history may be stored locally on the device. Do not persist guest personal data to cloud storage by default.
+- Account creation/login is prompted contextually when a guest opens account-dependent features; do not block basic exploration with an upfront login wall.
+- Account-required features include cross-device/cloud chat sync, persistent personal Memory, user-to-user Message, AI Hub collaboration, and account-linked files/projects/profile.
+- Explain the benefit before asking a guest to sign up. Do not silently discard local guest history; where technically feasible, offer an explicit choice to transfer eligible local history into the new account.
+- Keep guest usage limits configurable and transparent; do not invent a fixed quota until product/backend constraints are reviewed.
+
+### Account and authentication design
+- Signup methods planned: email, mobile number, and Google sign-in.
+- Email/mobile OTP and Google authentication require a secure provider/backend design.
+- Account data must be isolated per user; sessions, recovery, OTP expiry/retry, and authorization must be designed before enabling private cloud data.
+- Login remains available from navigation for returning users. Login/Logout presentation must reflect actual auth state.
+
+### Welcome and dashboard
 - Welcome page: company name, tagline, AJ AI introduction, development story, accurate ChatGPT development-assistance credit, signup entry, and Explore preview.
-- Signup methods planned: email, mobile number, and Google sign-in. Email/mobile OTP and Google authentication require a secure provider/backend design.
-- Login is required before private AI features and user-specific modules are enabled.
 - Home dashboard: central holographic Core with a user-editable Core name; the user's chosen display name and Core name are the same.
 - Main modules: AI Chat, Message, AI Hub.
 - Additional modules: Profile, Code Studio, File, Memory, Evolving.
-- Bottom navigation: Home, Login, Logout, Feedback. Auth state must determine which auth action is available.
+- Bottom navigation: Home, Login, Logout, Feedback. Auth state must determine which auth action is available; do not show a misleading active Login and Logout action simultaneously.
 
 ## 3. Integrated voice design
 ### AI Chat
@@ -62,7 +77,7 @@ Status: Development plan recorded; implementation and verification are pending.
 - Run Flutter Analyze and automated tests.
 - Build a release APK through GitHub Actions.
 - Verify installation and key flows on the user's Android device.
-- Test queue recovery, offline/slow network behavior, chat history restore, Hindi consistency, and voice permissions.
+- Test guest-to-account transition, local history handling, queue recovery, offline/slow network behavior, chat history restore, Hindi consistency, and voice permissions.
 - Mark a feature complete only after implementation and test evidence exist.
 
 ## 7. Current implementation status
