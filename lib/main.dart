@@ -421,13 +421,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 17),
           const Center(
-            child: Text(
-              'BUILD • INNOVATE • AUTOMATE',
-              style: TextStyle(
-                color: muted,
-                fontSize: 10,
-                letterSpacing: 2,
-              ),
+            child: Column(
+              children: [
+                Text(
+                  'MADE IN INDIA 🇮🇳',
+                  style: TextStyle(
+                    color: pink,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                SizedBox(height: 7),
+                Text(
+                  'Future Technology with New India',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'BUILD • INNOVATE • AUTOMATE',
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 10,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
