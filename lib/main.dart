@@ -817,6 +817,14 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
+    // A request left in "processing" means the app closed mid-flight.
+    // Re-queue it with the same stable request ID after restoring state.
+    for (var i = 0; i < pendingQueue.length; i++) {
+      if (pendingQueue[i].status == 'processing') {
+        pendingQueue[i] = pendingQueue[i].copyWith(status: 'pending');
+      }
+    }
+
     // Persist migration/initial state before any network processing.
     if (!await saveChatState()) {
       queueRestoreSafe = false;
