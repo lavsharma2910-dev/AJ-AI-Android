@@ -52,3 +52,31 @@ Status: implementation in progress; no APK acceptance claim until CI and device 
 - The prompt improves response behavior but does not add web search, live-data retrieval, citations, or a new model. Those require separately designed and tested backend capabilities.
 - CI build success is not proof of answer accuracy; the manual quality suite is mandatory.
 - No merge of protected PRs and no public launch without explicit approval.
+
+
+## User-device test report (2026-11-21)
+
+Verified by the user on the installed APK:
+- Copy All copies the complete conversation correctly.
+- Share All shares the complete conversation correctly.
+- Delete All removes the conversation as expected.
+- Delete confirmation appears; cancelling leaves the conversation intact.
+- Copy, share, and delete work correctly in long conversations.
+
+User acceptance: **5/5 chat-management checks passed** (based on the user's hands-on report; not automated test results).
+
+Response-time feedback:
+- The user reports response speed has improved compared with earlier builds.
+- Current observed response time is still around **19–20 seconds** and is considered too slow; substantial improvement remains.
+- This is subjective user-observed feedback, not a measured benchmark.
+
+## Update 33 kickoff — response latency + Hindi answer quality
+
+Priority work:
+1. Trace Android request/response path and determine whether the client waits for the full response (streaming absent/available).
+2. Use existing Worker logs (gemini_attempt durationMs, chat_complete totalDurationMs, and fallbackUsed) to separate primary-model latency, fallback latency, and total request time; do not guess at the bottleneck.
+3. Design safe timing diagnostics that avoid logging user prompt/answer text or other personal data.
+4. Improve persistent language preference handling so explicit natural Devanagari Hindi requests are respected across turns, without archaic or overly Sanskritized wording.
+5. Add a repeatable quality/latency evaluation checklist and compare changes before claiming improvement.
+
+Constraints: no production Cloudflare Worker deployment, PR merge, or public release without explicit user approval. Do not promise 2–3 second responses until measured and demonstrated.
