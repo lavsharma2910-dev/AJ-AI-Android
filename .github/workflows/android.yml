@@ -4,7 +4,7 @@ name: Build AJ AI APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/update-31-chat-actions, feature/update-32-foundation]
+    branches: [main, feature/update-31-chat-actions, feature/update-32-foundation, feature/update-32-chat-quality-redesign]
 
 permissions:
   contents: read
