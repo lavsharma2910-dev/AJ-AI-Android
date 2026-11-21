@@ -255,11 +255,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: BoxShape.circle,
                       color: Color(0xFF211B42),
                     ),
-                    child: const Icon(
-                      Icons.face_3_rounded,
-                      size: 100,
-                      color: Color(0xFFE6C8FF),
-                    ),
+                    child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 92,
+                        height: 92,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF9CD8FF).withOpacity(0.8), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(color: const Color(0xFF36B9FF).withOpacity(0.28), blurRadius: 22, spreadRadius: 5),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.all_inclusive_rounded, size: 76, color: Color(0xFFE6F5FF)),
+                      const Positioned(top: 24, right: 24, child: Icon(Icons.auto_awesome, size: 17, color: Colors.white)),
+                    ],
+                  ),
                   ),
                 ),
 
@@ -1278,28 +1291,45 @@ class _ChatScreenState extends State<ChatScreen> {
 
 
   Future<void> copyConversation() async {
-    if (messages.isEmpty) return;
+    if (!historyLoaded || messages.isEmpty) return;
+    final snapshot = List<Map<String, String>>.from(messages);
+    final transcript = _transcript(snapshot);
+    if (transcript.trim().isEmpty) return;
+    try {
+      await Clipboard.setData(ClipboardData(text: transcript));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('पूरी बातचीत कॉपी हुई • ${snapshot.length} संदेश')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('कॉपी नहीं हो पाई। फिर से प्रयास करें।')),
+      );
+      debugPrint('Copy all failed: $error');
+    }
+  }
 
-    final transcript = messages.map((item) {
-      final isUser = item['type'] == 'user';
-      return '${isUser ? 'आप' : 'AJ AI'}:\n${item['text'] ?? ''}';
-    }).join('\n\n--------------------\n\n');
-
-    await Clipboard.setData(ClipboardData(text: transcript));
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('पूरी बातचीत Copy हो गई')),
-    );
+  Future<void> shareConversation() async {
+    if (!historyLoaded || messages.isEmpty) return;
+    final snapshot = List<Map<String, String>>.from(messages);
+    final transcript = _transcript(snapshot);
+    if (transcript.trim().isEmpty) return;
+    try {
+      await shareText(transcript);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('पूरी बातचीत शेयर नहीं हो पाई।')),
+      );
+      debugPrint('Share all failed: $error');
+    }
   }
 
   Future<void> showConversation() async {
     if (!mounted) return;
 
-    final transcript = messages.map((item) {
-      final isUser = item['type'] == 'user';
-      return '${isUser ? 'आप' : 'AJ AI'}:\n${item['text'] ?? ''}';
-    }).join('\n\n--------------------\n\n');
+    final transcript = _transcript(List<Map<String, String>>.from(messages));
 
     await showDialog<void>(
       context: context,
@@ -1467,7 +1497,7 @@ class _ChatScreenState extends State<ChatScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: Color(0xFF6746AE),
-              child: Icon(Icons.face_3_rounded, color: Colors.white),
+              child: Icon(Icons.all_inclusive_rounded, color: Color(0xFFE6F5FF)),
             ),
             SizedBox(width: 10),
             Column(
@@ -1491,8 +1521,22 @@ class _ChatScreenState extends State<ChatScreen> {
               IconButton(tooltip: 'New Chat', onPressed: newChat, icon: const Icon(Icons.add_comment_outlined)),
               IconButton(tooltip: 'History', onPressed: openHistory, icon: const Icon(Icons.history)),
               IconButton(tooltip: 'Save', onPressed: saveConversation, icon: Icon(isSavedConversation ? Icons.bookmark : Icons.bookmark_border)),
-              IconButton(tooltip: 'Share', onPressed: () => shareText(_transcript(messages)), icon: const Icon(Icons.share)),
+              IconButton(tooltip: 'Share all chat', onPressed: shareConversation, icon: const Icon(Icons.share)),
               IconButton(tooltip: 'Select', onPressed: () => setState(() => selectionMode = true), icon: const Icon(Icons.checklist)),
+              PopupMenuButton<String>(
+                tooltip: 'More chat options',
+                onSelected: (value) {
+                  if (value == 'copy_all') copyConversation();
+                  if (value == 'share_all') shareConversation();
+                  if (value == 'view_all') showConversation();
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'copy_all', child: ListTile(dense: true, leading: Icon(Icons.copy_all_rounded), title: Text('Copy All'), contentPadding: EdgeInsets.zero)),
+                  PopupMenuItem(value: 'share_all', child: ListTile(dense: true, leading: Icon(Icons.ios_share_rounded), title: Text('Share All'), contentPadding: EdgeInsets.zero)),
+                  PopupMenuItem(value: 'view_all', child: ListTile(dense: true, leading: Icon(Icons.article_outlined), title: Text('पूरी बातचीत देखें'), contentPadding: EdgeInsets.zero)),
+                ],
+                icon: const Icon(Icons.more_vert_rounded),
+              ),
               IconButton(tooltip: 'Delete', onPressed: deleteConversation, icon: const Icon(Icons.delete_outline)),
             ],
       ),
