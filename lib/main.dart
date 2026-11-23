@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'package:aj_ai/pending_chat_message.dart';
+import 'package:aj_ai/request_diagnostics.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -1193,6 +1194,7 @@ class _ChatScreenState extends State<ChatScreen> {
         scrollToBottom();
 
         var persistenceFailed = false;
+        final requestMetric = ChatRequestMetric();
         try {
           final response = await http.post(
             Uri.parse(apiUrl),
@@ -1203,9 +1205,12 @@ class _ChatScreenState extends State<ChatScreen> {
               'history': buildChatContext(),
             }),
           ).timeout(const Duration(seconds: 60));
+          requestMetric.stop();
+          requestMetric.responseReceived(response.statusCode);
 
           final data = jsonDecode(response.body);
           if (response.statusCode != 200) {
+            requestMetric.markFailure();
             throw Exception(
               data is Map
                   ? (data['error'] ?? data['detail'] ??
@@ -1216,8 +1221,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
           final answer = data is Map ? data['reply'] : null;
           if (answer == null || answer.toString().trim().isEmpty) {
+            requestMetric.markFailure();
             throw Exception('AI से खाली जवाब मिला।');
           }
+          requestMetric.markSuccess();
           if (!mounted) break;
 
           // Commit reply and queue removal together in the same state record.
@@ -1243,6 +1250,8 @@ class _ChatScreenState extends State<ChatScreen> {
             break;
           }
         } catch (e) {
+          requestMetric.stop();
+          requestMetric.markFailure();
           if (!mounted) break;
           if (persistenceFailed) break;
           setState(() {
@@ -1254,6 +1263,7 @@ class _ChatScreenState extends State<ChatScreen> {
           await saveChatState();
           break;
         } finally {
+          if (kDebugMode) debugPrint(requestMetric.diagnosticLine());
           if (mounted) {
             setState(() => isLoading = false);
             scrollToBottom();

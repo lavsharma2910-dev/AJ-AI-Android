@@ -16,7 +16,7 @@ Status: diagnostic and implementation plan; no release acceptance until CI and d
 - Current observed 19–20 second response latency is user feedback, not a benchmark.
 
 ## Latency measurement plan
-Record only durations and non-sensitive outcome flags. Never log message text, AI answer text, account identifiers, tokens, or personal data.
+Record only durations and non-sensitive outcome flags. The Android client now emits a debug-only line in the form `AJ_AI_METRIC request_ms=<duration> status=<code-or-none> outcome=<category>`. It measures the HTTP round-trip through response-body completion; it does not include later UI persistence/display work. The diagnostic line never includes message/answer text, prompt history, account identifiers, tokens, or PII. Outcomes are limited to success, HTTP error, network error, and response error. No metric is sent to a separate analytics service. Never log message text, AI answer text, account identifiers, tokens, or personal data.
 - Android: request start, response received, decode completed, UI answer displayed.
 - Backend: total chat completion duration; primary model attempt duration; fallback used (boolean); HTTP outcome category.
 - Compare at least 10 representative requests before and after changes; report median and range. Include Hindi, English, short, multi-part, calculation, and follow-up prompts.
