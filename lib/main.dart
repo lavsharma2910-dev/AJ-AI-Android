@@ -1814,6 +1814,14 @@ class WelcomeScreen extends StatelessWidget {
                   shape: const StadiumBorder()),
                 onPressed: () => _preview(context, 'Login अभी Preview है।'),
                 icon: const Icon(Icons.login), label: const Text('Login'))),
+              const SizedBox(height: 10),
+              _NeonButton(
+                label: 'Continue as Guest  (Testing)',
+                icon: Icons.visibility_outlined,
+                onTap: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const NeonDashboardScreen()),
+                ),
+              ),
               const SizedBox(height: 12),
               const Text('or continue with', style: TextStyle(color: muted, fontSize: 11)),
               const SizedBox(height: 10),
