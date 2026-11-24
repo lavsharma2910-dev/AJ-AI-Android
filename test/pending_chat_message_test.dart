@@ -125,4 +125,22 @@ void main() {
       );
     });
   });
+
+  test('failed request can be retried with the same stable identity', () {
+    final failed = PendingChatMessage(
+      id: 'stable-retry-id',
+      text: 'Retry this request',
+      createdAt: DateTime.utc(2026, 11, 24),
+      retryCount: 1,
+      status: 'failed',
+    );
+
+    final retry = failed.copyWith(status: 'pending');
+
+    expect(retry.id, failed.id);
+    expect(retry.text, failed.text);
+    expect(retry.retryCount, failed.retryCount);
+    expect(retry.status, 'pending');
+  });
+
 }
