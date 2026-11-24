@@ -37,7 +37,7 @@ jobs:
           if permission not in content:
               content = content.replace(
                   '<application',
-                  permission + '\\n    <application',
+                  permission + '\n    <application',
                   1
               )
               path.write_text(content)
@@ -72,12 +72,12 @@ jobs:
           root_plugin = 'id("com.google.gms.google-services") version "4.6.0" apply false'
 
           if "com.google.gms.google-services" not in root_text:
-              match = re.search(r'plugins\\s*\\{', root_text)
+              match = re.search(r'plugins\s*\{', root_text)
               if match:
                   pos = match.end()
-                  root_text = root_text[:pos] + "\\n    " + root_plugin + root_text[pos:]
+                  root_text = root_text[:pos] + "\n    " + root_plugin + root_text[pos:]
               else:
-                  root_text = "plugins {\\n    " + root_plugin + "\\n}\\n\\n" + root_text
+                  root_text = "plugins {\n    " + root_plugin + "\n}\n\n" + root_text
 
               root.write_text(root_text)
 
@@ -85,12 +85,12 @@ jobs:
           app_plugin = 'id("com.google.gms.google-services")'
 
           if "com.google.gms.google-services" not in app_text:
-              match = re.search(r'plugins\\s*\\{', app_text)
+              match = re.search(r'plugins\s*\{', app_text)
               if not match:
                   raise SystemExit("App Gradle plugins block not found")
 
               pos = match.end()
-              app_text = app_text[:pos] + "\\n    " + app_plugin + app_text[pos:]
+              app_text = app_text[:pos] + "\n    " + app_plugin + app_text[pos:]
               app.write_text(app_text)
           PY
 
