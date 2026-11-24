@@ -52,3 +52,17 @@ For each significant source change: checkpoint branch/commit -> change -> analyz
 
 ## Approval boundary
 Do not deploy production Cloudflare Worker, merge protected PRs, or publish/release without explicit user approval.
+
+
+## Verified checkpoint — 24 Nov 2026
+
+- Working branch commit: `f2c7ee78aa1e514cb27a3af7d2380a680cedc84b`.
+- CI run: [Build #69](https://github.com/lavsharma2910-dev/AJ-AI-Android/actions/runs/45332936299) — **PASS**.
+- Flutter analysis: **PASS** with 23 info-level lint/deprecation findings; no analyzer errors or warnings blocked the run.
+- Automated tests: **16/16 PASS** (queue model, request diagnostics, and app startup).
+- Release APK: **PASS**, built as `app-release.apk` (51.1 MB).
+- APK SHA-256: `9f1668f0c565b2ebe1dc580936710f86f0dcf271fa1fc54eb1100e3af0225bdf`.
+- GitHub artifact: `AJ-AI-APK`, artifact ID `14892990929`, expires 22 Feb 2027.
+- Request timing is client-side round-trip timing only and is emitted in debug builds as duration/status/outcome fields. No prompt or answer content is written by this metric. Backend stage timing is **NOT IMPLEMENTED**; no Cloudflare production Worker was changed or deployed.
+- Device QA is **NOT TESTED**. The current premium neon blue/purple abstract AI Core UI is included. Home modules Voice Chat, Code Studio, Web Search, My Files, Memory, Notifications, and the Avatar/Profile destinations remain preview/placeholders and must not be treated as fully implemented.
+- Next gate: install this APK on a physical Android device, verify the existing chat/history/queue actions and home navigation, then record Hindi quality and at least 10 request timings. Keep the build as a test APK, not a public release.
