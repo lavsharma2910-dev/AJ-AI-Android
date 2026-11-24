@@ -66,3 +66,16 @@ Do not deploy production Cloudflare Worker, merge protected PRs, or publish/rele
 - Request timing is client-side round-trip timing only and is emitted in debug builds as duration/status/outcome fields. No prompt or answer content is written by this metric. Backend stage timing is **NOT IMPLEMENTED**; no Cloudflare production Worker was changed or deployed.
 - Device QA is **NOT TESTED**. The current premium neon blue/purple abstract AI Core UI is included. Home modules Voice Chat, Code Studio, Web Search, My Files, Memory, Notifications, and the Avatar/Profile destinations remain preview/placeholders and must not be treated as fully implemented.
 - Next gate: install this APK on a physical Android device, verify the existing chat/history/queue actions and home navigation, then record Hindi quality and at least 10 request timings. Keep the build as a test APK, not a public release.
+
+
+## Install compatibility gate — 24 Nov 2026
+
+The previously confirmed phone build (GitHub Actions build #18, artifact `14245265678`) and the Update 33 test build #69 (artifact `14892990929`) were both downloaded and their APK v2 signing certificates were inspected.
+
+- Earlier build #18 certificate SHA-256: `97ab1c74070fed6543ae61ab8f130bd704b9f1b0dcecced3f95c709531810349`.
+- Update 33 build #69 certificate SHA-256: `c7904b93d5ab39327708c989bdd5063d2db9a781751770d30eb77450dcf06174`.
+- The signing certificates **do not match**. Android will reject installing #69 as an update over #18.
+- **Do not uninstall the existing app** to work around this: local chat history and pending messages may be lost.
+- The old runner's private debug signing key is not present in the repository or either APK artifact. A new stable signing key would secure future builds but cannot recreate the old certificate.
+- Physical-device QA is **BLOCKED pending a safe install route**. Possible routes requiring user approval: a side-by-side test package with a distinct application ID (separate app data), or a user-approved export/backup process before a fresh install. A persistent signing keystore and GitHub Actions secret also require explicit user approval and only solve future upgrades.
+- No signing secrets were created or changed; no app uninstall, data deletion, PR merge, or production deployment was performed.
