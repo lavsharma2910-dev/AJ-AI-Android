@@ -4,6 +4,7 @@ import 'package:aj_ai/pending_chat_message.dart';
 import 'package:aj_ai/request_diagnostics.dart';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
