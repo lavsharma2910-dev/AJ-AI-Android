@@ -41,7 +41,7 @@ class AJAIApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const HomeScreen(),
+      home: const WelcomeScreen(),
     );
   }
 }
@@ -1744,4 +1744,360 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
+
+
+// AJ AI Update 34 — approved full neon experience.
+// The hand-drawn sketch is not used as a UI asset. All screens are native Flutter widgets.
+const Color ajCyan = Color(0xFF29D9FF);
+const Color ajBlue = Color(0xFF176BFF);
+const Color ajViolet = Color(0xFF8B5CFF);
+const Color ajDeep = Color(0xFF070B1B);
+
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF101A43), ajDeep, Color(0xFF160B35)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 50),
+                child: Column(
+                  children: [
+                    const Text('AJ SOFTWARE LABS',
+                      style: TextStyle(color: ajCyan, letterSpacing: 3,
+                        fontSize: 12, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 28),
+                    const HolographicCore(size: 190),
+                    const SizedBox(height: 24),
+                    const Text('Meet AJ AI',
+                      style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2)),
+                    const SizedBox(height: 8),
+                    const Text('Your Advanced AI Companion',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFFD8E9FF), fontSize: 16)),
+                    const SizedBox(height: 18),
+                    const Text('Dream • Create • Innovate',
+                      style: TextStyle(color: ajCyan, letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 24),
+                    const _WelcomeBullet(icon: Icons.chat_bubble_outline, text: 'AI Chat और स्मार्ट सहायता'),
+                    const _WelcomeBullet(icon: Icons.auto_awesome, text: 'AI Hub, Research और Creative Tools'),
+                    const _WelcomeBullet(icon: Icons.lock_outline, text: 'आपकी Privacy और Control'),
+                    const SizedBox(height: 25),
+                    _NeonButton(label: 'Create Account / Continue', icon: Icons.rocket_launch,
+                      onTap: () => Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (_) => const NeonDashboardScreen()))),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white, side: const BorderSide(color: ajCyan),
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      onPressed: () => Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (_) => const NeonDashboardScreen())),
+                      icon: const Icon(Icons.login), label: const Text('Login')),
+                    const SizedBox(height: 12),
+                    const Text('Build. Innovate. Automate.',
+                      style: TextStyle(color: muted, fontSize: 11, letterSpacing: 1)),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _WelcomeBullet extends StatelessWidget {
+  final IconData icon; final String text;
+  const _WelcomeBullet({required this.icon, required this.text});
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(children: [
+      Icon(icon, color: ajCyan, size: 20), const SizedBox(width: 12),
+      Expanded(child: Text(text, style: const TextStyle(color: Color(0xFFDCE7FF)))),
+    ]),
+  );
+}
+
+class HolographicCore extends StatelessWidget {
+  final double size;
+  const HolographicCore({super.key, this.size = 108});
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size, height: size,
+    child: Stack(alignment: Alignment.center, children: [
+      Container(width: size, height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          border: Border.all(color: ajCyan.withOpacity(.55), width: 1.5),
+          boxShadow: [BoxShadow(color: ajBlue.withOpacity(.35), blurRadius: 32, spreadRadius: 5)])),
+      Transform.rotate(angle: .55, child: Container(width: size*.83, height: size*.42,
+        decoration: BoxDecoration(border: Border.all(color: ajViolet, width: 2),
+          borderRadius: BorderRadius.circular(100)))),
+      Transform.rotate(angle: -.55, child: Container(width: size*.83, height: size*.42,
+        decoration: BoxDecoration(border: Border.all(color: ajCyan.withOpacity(.85), width: 1.5),
+          borderRadius: BorderRadius.circular(100)))),
+      Container(width: size*.55, height: size*.55,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          gradient: const RadialGradient(colors: [Color(0xFFB7F8FF), ajBlue, Color(0xFF27145C)]),
+          boxShadow: [BoxShadow(color: ajCyan.withOpacity(.65), blurRadius: 24)])),
+      const Icon(Icons.all_inclusive_rounded, color: Colors.white, size: 48),
+      Positioned(top: size*.15, right: size*.19,
+        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 15)),
+    ]),
+  );
+}
+
+class NeonDashboardScreen extends StatelessWidget {
+  const NeonDashboardScreen({super.key});
+  static const List<_AJFeature> features = [
+    _AJFeature('AI Chat','बातचीत शुरू करें',Icons.chat_bubble_outline),
+    _AJFeature('Memory','यादें और प्राथमिकताएँ',Icons.psychology_alt_outlined),
+    _AJFeature('Code Studio','कोड लिखें और समझें',Icons.code),
+    _AJFeature('Voice AI','आवाज़ से बातचीत',Icons.mic_none),
+    _AJFeature('Files','फाइलें और दस्तावेज़',Icons.folder_open),
+    _AJFeature('Tools','स्मार्ट टूलकिट',Icons.grid_view),
+    _AJFeature('AI Hub','AI फीचर्स का केंद्र',Icons.hub),
+    _AJFeature('Messaging','मैसेज और शेयर',Icons.forum_outlined),
+    _AJFeature('More','अन्य सुविधाएँ',Icons.apps),
+  ];
+  void open(BuildContext context, String name) {
+    if (name == 'AI Chat') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()));
+    } else if (name == 'AI Hub') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const AIHubScreen()));
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => FeatureScreen(title: name)));
+    }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: ajDeep,
+    body: SafeArea(child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(17, 14, 17, 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.all_inclusive, color: ajCyan, size: 30),
+          const SizedBox(width: 9),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('AJ SOFTWARE LABS', style: TextStyle(color: ajCyan, fontSize: 9, letterSpacing: 2)),
+            Text('AJ AI', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          ])),
+          IconButton(onPressed: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            icon: const Icon(Icons.account_circle_outlined, color: ajCyan)),
+          IconButton(onPressed: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const FeatureScreen(title: 'Notifications'))),
+            icon: const Icon(Icons.notifications_none, color: ajCyan)),
+        ]),
+        const SizedBox(height: 16),
+        Container(width: double.infinity, padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            gradient: const LinearGradient(colors: [Color(0xFF132F66), Color(0xFF211344), Color(0xFF0D1838)]),
+            border: Border.all(color: ajCyan.withOpacity(.55)),
+            boxShadow: [BoxShadow(color: ajBlue.withOpacity(.18), blurRadius: 24)]),
+          child: Column(children: [
+            const Text('WELCOME BACK', style: TextStyle(color: ajCyan, letterSpacing: 2, fontSize: 10)),
+            const SizedBox(height: 12),
+            const HolographicCore(size: 116),
+            const SizedBox(height: 10),
+            const Text('AJ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 4)),
+            const Text('Dream • Create • Innovate', style: TextStyle(color: Color(0xFFD9E7FF))),
+            const SizedBox(height: 8),
+            const Text('नमस्ते! आज आप क्या बनाना चाहेंगे?',
+              textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
+            const SizedBox(height: 14),
+            _NeonButton(label: 'Start AI Chat', icon: Icons.chat,
+              onTap: () => open(context, 'AI Chat')),
+          ]),
+        ),
+        const SizedBox(height: 23),
+        const Text('Explore AJ AI', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        const Text('आपके AI workspace की सुविधाएँ', style: TextStyle(color: muted, fontSize: 12)),
+        const SizedBox(height: 13),
+        GridView.builder(
+          itemCount: features.length, shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, crossAxisSpacing: 9, mainAxisSpacing: 10, childAspectRatio: .91),
+          itemBuilder: (context, i) {
+            final f = features[i];
+            return InkWell(
+              borderRadius: BorderRadius.circular(17),
+              onTap: () => open(context, f.title),
+              child: Container(padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101A35),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: (i.isEven ? ajCyan : ajViolet).withOpacity(.62)),
+                  boxShadow: [BoxShadow(color: ajBlue.withOpacity(.08), blurRadius: 12)]),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(f.icon, color: i.isEven ? ajCyan : const Color(0xFFB99AFF), size: 27),
+                  const SizedBox(height: 8),
+                  Text(f.title, textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(f.subtitle, textAlign: TextAlign.center,
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: muted, fontSize: 9)),
+                ]),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 17),
+        Row(children: [
+          Expanded(child: _BottomAction(icon: Icons.home, label: 'Home', onTap: () {})),
+          Expanded(child: _BottomAction(icon: Icons.login, label: 'Login', onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const WelcomeScreen())))),
+          Expanded(child: _BottomAction(icon: Icons.logout, label: 'Logout', onTap: () => Navigator.pushAndRemoveUntil(context,
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false))),
+          Expanded(child: _BottomAction(icon: Icons.feedback_outlined, label: 'Feedback',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeatureScreen(title: 'Feedback'))))),
+        ]),
+        const SizedBox(height: 10),
+        const Center(child: Text('FREE ACCESS  •  SECURE & PRIVATE  •  SUPER FAST',
+          style: TextStyle(color: muted, fontSize: 8, letterSpacing: 1))),
+      ]),
+    )),
+  );
+}
+
+class _AJFeature {
+  final String title, subtitle; final IconData icon;
+  const _AJFeature(this.title, this.subtitle, this.icon);
+}
+
+class _NeonButton extends StatelessWidget {
+  final String label; final IconData icon; final VoidCallback onTap;
+  const _NeonButton({required this.label, required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) => SizedBox(width: double.infinity, height: 50,
+    child: DecoratedBox(decoration: BoxDecoration(
+      gradient: const LinearGradient(colors: [ajBlue, ajViolet]),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: ajBlue.withOpacity(.28), blurRadius: 16)]),
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent, foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+        onPressed: onTap, icon: Icon(icon), label: Text(label,
+          style: const TextStyle(fontWeight: FontWeight.w800)))));
+}
+
+class _BottomAction extends StatelessWidget {
+  final IconData icon; final String label; final VoidCallback onTap;
+  const _BottomAction({required this.icon, required this.label, required this.onTap});
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: onTap, child: Column(children: [
+      Icon(icon, color: ajCyan, size: 20),
+      Text(label, style: const TextStyle(color: Colors.white, fontSize: 9)),
+    ]));
+}
+
+class AIHubScreen extends StatelessWidget {
+  const AIHubScreen({super.key});
+  static const items = [
+    ('AI Models','मॉडल चयन और उपलब्धता',Icons.memory),
+    ('AI Image Generator','AI Art बनाने का workspace',Icons.image_outlined),
+    ('AI Writing','लेखन और content सहायता',Icons.edit_note),
+    ('AI Research','वेब रिसर्च और स्रोत',Icons.travel_explore),
+    ('AI Tools','उपयोगी AI utilities',Icons.build_circle_outlined),
+    ('AI Assistant','व्यक्तिगत सहायक सेटिंग',Icons.smart_toy_outlined),
+  ];
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: ajDeep,
+    appBar: AppBar(backgroundColor: ajDeep, title: const Text('AI Hub')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      const HolographicCore(size: 118),
+      const SizedBox(height: 12),
+      const Center(child: Text('Your AI Feature Center',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+      const Center(child: Text('एक ही जगह पर आपके creative और productivity tools',
+        textAlign: TextAlign.center, style: TextStyle(color: muted))),
+      const SizedBox(height: 20),
+      ...items.map((item) => Card(
+        color: const Color(0xFF111A36),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: ajCyan.withOpacity(.35))),
+        child: ListTile(
+          leading: Icon(item.$3, color: ajCyan, size: 28),
+          title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(item.$2, style: const TextStyle(color: muted)),
+          trailing: const Icon(Icons.chevron_right, color: ajCyan),
+          onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => FeatureScreen(title: item.$1))),
+        ))),
+    ]),
+  );
+}
+
+class FeatureScreen extends StatelessWidget {
+  final String title;
+  const FeatureScreen({super.key, required this.title});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: ajDeep,
+    appBar: AppBar(backgroundColor: ajDeep, title: Text(title)),
+    body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(
+      mainAxisSize: MainAxisSize.min, children: [
+        const HolographicCore(size: 105),
+        const SizedBox(height: 20),
+        Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        const Text('यह स्क्रीन AJ AI के नए डिज़ाइन में जोड़ दी गई है। इस सुविधा का backend और पूरा कार्य अभी अलग से जोड़ना और जाँचना बाकी है।',
+          textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFB9C6E8), height: 1.5)),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back), label: const Text('Dashboard पर वापस जाएँ')),
+      ],
+    ))),
+  );
+}
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: ajDeep,
+    appBar: AppBar(backgroundColor: ajDeep, title: const Text('Profile & Settings')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      const HolographicCore(size: 100),
+      const SizedBox(height: 12),
+      const Center(child: Text('AJ AI Account', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
+      const SizedBox(height: 18),
+      for (final entry in [
+        (Icons.language, 'Language & Hindi Mode'),
+        (Icons.psychology_outlined, 'Memory & Personalization'),
+        (Icons.lock_outline, 'Privacy & Security'),
+        (Icons.notifications_outlined, 'Notifications'),
+        (Icons.info_outline, 'About AJ SOFTWARE LABS'),
+      ]) Card(color: const Color(0xFF111A36), child: ListTile(
+        leading: Icon(entry.$1, color: ajCyan), title: Text(entry.$2),
+        trailing: const Icon(Icons.chevron_right, color: ajCyan),
+        onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => FeatureScreen(title: entry.$2))),
+      )),
+    ]),
+  );
 }
