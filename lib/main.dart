@@ -1797,7 +1797,7 @@ class WelcomeScreen extends StatelessWidget {
                     const _WelcomeBullet(icon: Icons.auto_awesome, text: 'AI Hub, Research और Creative Tools'),
                     const _WelcomeBullet(icon: Icons.lock_outline, text: 'आपकी Privacy और Control'),
                     const SizedBox(height: 25),
-                    _NeonButton(label: 'Create Account / Continue', icon: Icons.rocket_launch,
+                    _NeonButton(label: 'Continue as Guest', icon: Icons.rocket_launch,
                       onTap: () => Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (_) => const NeonDashboardScreen()))),
                     const SizedBox(height: 12),
@@ -1806,9 +1806,13 @@ class WelcomeScreen extends StatelessWidget {
                         foregroundColor: Colors.white, side: const BorderSide(color: ajCyan),
                         minimumSize: const Size(double.infinity, 50),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                      onPressed: () => Navigator.pushReplacement(context,
-                        MaterialPageRoute(builder: (_) => const NeonDashboardScreen())),
-                      icon: const Icon(Icons.login), label: const Text('Login')),
+                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Login अभी Preview है — account authentication connect नहीं है।'))),
+                      icon: const Icon(Icons.login), label: const Text('Login • Preview')),
+                    const SizedBox(height: 8),
+                    const Text('Guest mode उपलब्ध है • Account Login / Sign-up अभी connected नहीं है',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: muted, fontSize: 10)),
                     const SizedBox(height: 12),
                     const Text('Build. Innovate. Automate.',
                       style: TextStyle(color: muted, fontSize: 11, letterSpacing: 1)),
@@ -1866,15 +1870,16 @@ class HolographicCore extends StatelessWidget {
 
 class NeonDashboardScreen extends StatelessWidget {
   const NeonDashboardScreen({super.key});
+  // Keep the approved 3x3 home-screen order.
   static const List<_AJFeature> features = [
     _AJFeature('AI Chat','बातचीत शुरू करें',Icons.chat_bubble_outline),
-    _AJFeature('Memory','यादें और प्राथमिकताएँ',Icons.psychology_alt_outlined),
-    _AJFeature('Code Studio','कोड लिखें और समझें',Icons.code),
-    _AJFeature('Voice AI','आवाज़ से बातचीत',Icons.mic_none),
-    _AJFeature('Files','फाइलें और दस्तावेज़',Icons.folder_open),
-    _AJFeature('Tools','स्मार्ट टूलकिट',Icons.grid_view),
+    _AJFeature('Voice AI','Preview • voice setup बाकी',Icons.mic_none),
     _AJFeature('AI Hub','AI फीचर्स का केंद्र',Icons.hub),
-    _AJFeature('Messaging','मैसेज और शेयर',Icons.forum_outlined),
+    _AJFeature('Memory','Preview • setup बाकी',Icons.psychology_alt_outlined),
+    _AJFeature('Files','Preview • file tools बाकी',Icons.folder_open),
+    _AJFeature('Messaging','Preview • messaging बाकी',Icons.forum_outlined),
+    _AJFeature('Code Studio','Preview • code tools बाकी',Icons.code),
+    _AJFeature('Tools','Preview • utilities बाकी',Icons.grid_view),
     _AJFeature('More','अन्य सुविधाएँ',Icons.apps),
   ];
   void open(BuildContext context, String name) {
@@ -1966,12 +1971,12 @@ class NeonDashboardScreen extends StatelessWidget {
         const SizedBox(height: 17),
         Row(children: [
           Expanded(child: _BottomAction(icon: Icons.home, label: 'Home', onTap: () {})),
-          Expanded(child: _BottomAction(icon: Icons.login, label: 'Login', onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const WelcomeScreen())))),
-          Expanded(child: _BottomAction(icon: Icons.logout, label: 'Logout', onTap: () => Navigator.pushAndRemoveUntil(context,
-            MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false))),
-          Expanded(child: _BottomAction(icon: Icons.feedback_outlined, label: 'Feedback',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeatureScreen(title: 'Feedback'))))),
+          Expanded(child: _BottomAction(icon: Icons.chat_bubble_outline, label: 'Chat',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen())))),
+          Expanded(child: _BottomAction(icon: Icons.hub_outlined, label: 'AI Hub',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIHubScreen())))),
+          Expanded(child: _BottomAction(icon: Icons.person_outline, label: 'Profile',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())))),
         ]),
         const SizedBox(height: 10),
         const Center(child: Text('FREE ACCESS  •  SECURE & PRIVATE  •  SUPER FAST',
