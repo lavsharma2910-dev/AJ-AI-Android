@@ -1829,7 +1829,12 @@ class WelcomeScreen extends StatelessWidget {
               const Text('Your Data is Always Secure', style: TextStyle(color: Color(0xFFD8E9FF), fontSize: 11)),
               const SizedBox(height: 8),
               const Text('AJ SOFTWARE LABS', style: TextStyle(color: muted, fontSize: 10, letterSpacing: 2)),
-            ]))))));
+            ]),
+          ),
+        ),
+      )),
+    ),
+  );
   static void _preview(BuildContext context, String message) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
@@ -1994,13 +1999,13 @@ class NeonDashboardScreen extends StatelessWidget {
             Expanded(child: _BottomAction(icon: Icons.home_filled, label: 'Home', onTap: () {})),
             Expanded(child: _BottomAction(icon: Icons.lock_outline, label: 'Login',
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Login अभी Preview है।')))),
+                const SnackBar(content: Text('Login अभी Preview है।'))))),
             Expanded(child: _BottomAction(icon: Icons.logout, label: 'Logout',
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Guest session में Logout लागू नहीं है।')))),
+                const SnackBar(content: Text('Guest session में Logout लागू नहीं है।'))))),
             Expanded(child: _BottomAction(icon: Icons.star_border, label: 'Feedback',
               onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const FeatureScreen(title: 'Feedback')))),
+                MaterialPageRoute(builder: (_) => const FeatureScreen(title: 'Feedback'))))),
           ])),
         const SizedBox(height: 9),
         const Text('FREE ACCESS  •  SECURE & PRIVATE  •  SUPER FAST',
