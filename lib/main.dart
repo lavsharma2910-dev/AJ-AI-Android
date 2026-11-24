@@ -1191,7 +1191,22 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       while (mounted && pendingQueue.isNotEmpty) {
         final queuedMessage = pendingQueue.first;
-        setState(() => isLoading = true);
+        if (queuedMessage.status == 'failed') break;
+
+        final processingMessage = queuedMessage.copyWith(status: 'processing');
+        setState(() {
+          pendingQueue[0] = processingMessage;
+          isLoading = true;
+        });
+        if (!await saveChatState()) {
+          if (mounted) {
+            setState(() => pendingQueue[0] = queuedMessage);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('संदेश की स्थिति सेव नहीं हुई। फिर से प्रयास करें।')),
+            );
+          }
+          break;
+        }
         scrollToBottom();
 
         var persistenceFailed = false;
@@ -1228,10 +1243,8 @@ class _ChatScreenState extends State<ChatScreen> {
           requestMetric.markSuccess();
           if (!mounted) break;
 
-          // Commit reply and queue removal together in the same state record.
           final oldMessages = List<Map<String, String>>.from(messages);
           final oldQueue = List<PendingChatMessage>.from(pendingQueue);
-
           setState(() {
             pendingQueue.removeWhere((item) => item.id == queuedMessage.id);
             messages.add({'type': 'aj', 'text': answer.toString()});
@@ -1256,12 +1269,20 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!mounted) break;
           if (persistenceFailed) break;
           setState(() {
-            messages.add({
-              'type': 'aj',
-              'text': 'संदेश भेजा नहीं जा सका। Queue में सुरक्षित है। Retry बाद में करें।\n\n$e',
-            });
+            final index = pendingQueue.indexWhere((item) => item.id == queuedMessage.id);
+            if (index >= 0) {
+              pendingQueue[index] = pendingQueue[index].copyWith(
+                status: 'failed',
+                retryCount: pendingQueue[index].retryCount + 1,
+              );
+            }
           });
           await saveChatState();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('AI से अभी जवाब नहीं मिला। आपका संदेश सुरक्षित है; Retry दबाकर फिर भेजें।'),
+            ),
+          );
           break;
         } finally {
           if (kDebugMode) debugPrint(requestMetric.diagnosticLine());
@@ -1275,6 +1296,25 @@ class _ChatScreenState extends State<ChatScreen> {
       queueProcessing = false;
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  Future<void> retryPendingQueue() async {
+    if (!mounted || queueProcessing || pendingQueue.isEmpty) return;
+    final first = pendingQueue.first;
+    if (first.status == 'failed') {
+      setState(() {
+        pendingQueue[0] = first.copyWith(status: 'pending');
+      });
+      if (!await saveChatState()) {
+        if (!mounted) return;
+        setState(() => pendingQueue[0] = first);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Retry की स्थिति सेव नहीं हुई।')),
+        );
+        return;
+      }
+    }
+    await processQueue();
   }
 
   void scrollToBottom() {
@@ -1678,18 +1718,28 @@ class _ChatScreenState extends State<ChatScreen> {
               color: const Color(0xFF101A35),
               child: Row(
                 children: [
-                  const Icon(Icons.pending_actions, color: pink, size: 19),
+                  Icon(
+                    pendingQueue.first.status == 'failed'
+                        ? Icons.error_outline_rounded
+                        : Icons.pending_actions,
+                    color: pendingQueue.first.status == 'failed' ? Colors.orange : pink,
+                    size: 19,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Pending messages: ${pendingQueue.length}',
+                      pendingQueue.first.status == 'failed'
+                          ? 'संदेश नहीं भेजा गया • सुरक्षित है'
+                          : pendingQueue.first.status == 'processing'
+                              ? 'संदेश भेजा जा रहा है...'
+                              : 'Pending messages: ${pendingQueue.length}',
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: (isLoading || queueProcessing)
                         ? null
-                        : processQueue,
+                        : retryPendingQueue,
                     icon: const Icon(Icons.refresh, size: 17),
                     label: const Text('Retry'),
                   ),
