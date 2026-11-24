@@ -1500,14 +1500,14 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: ajDeep,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF111326),
+        backgroundColor: const Color(0xFF0D1630),
         title: const Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Color(0xFF6746AE),
+              backgroundColor: Color(0xFF123C70),
               child: Icon(Icons.all_inclusive_rounded, color: Color(0xFFE6F5FF)),
             ),
             SizedBox(width: 10),
@@ -1625,7 +1625,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: isUser
                                 ? const Color(0xFF6344A5)
                                 : card,
-                            border: isSelected ? Border.all(color: pink, width: 2) : null,
+                            border: Border.all(color: isSelected ? ajCyan : (isUser ? ajBlue : ajViolet).withOpacity(.55), width: isSelected ? 2 : 1),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(19),
                               topRight: const Radius.circular(19),
@@ -1647,7 +1647,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 Checkbox(
                                   value: isSelected,
                                   onChanged: (_) => toggleMessageSelection(index),
-                                  activeColor: pink,
+                                  activeColor: ajCyan,
                                 ),
                               IconButton(
                                 visualDensity: VisualDensity.compact,
@@ -1675,7 +1675,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (historyLoaded && pendingQueue.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              color: const Color(0xFF191B32),
+              color: const Color(0xFF101A35),
               child: Row(
                 children: [
                   const Icon(Icons.pending_actions, color: pink, size: 19),
@@ -1699,7 +1699,7 @@ class _ChatScreenState extends State<ChatScreen> {
           SafeArea(
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              color: const Color(0xFF111326),
+              color: const Color(0xFF0D1630),
               child: Row(
                 children: [
                   Expanded(
@@ -1710,7 +1710,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
                         filled: true,
-                        fillColor: card,
+                        fillColor: const Color(0xFF111D39),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 17,
                           vertical: 14,
@@ -1726,7 +1726,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Container(
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [purple, pink]),
+                      gradient: LinearGradient(colors: [ajBlue, ajViolet]),
                     ),
                     child: IconButton(
                       onPressed: (!historyLoaded || sendSaving || restoreFailed) ? null : send,
