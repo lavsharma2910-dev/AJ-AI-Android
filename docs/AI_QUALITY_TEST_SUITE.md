@@ -124,3 +124,31 @@ No test is considered executed until evidence is added below.
 - These Worker changes are source-only. Production Worker has NOT been deployed; current live app behavior is unchanged by this source edit.
 - Automated tests and APK build have NOT yet been verified for these commits.
 - Persistent language setting, real web/news retrieval, UI-visible queue lifecycle, and server-side request idempotency remain pending.
+
+
+## User-approved checkpoint — 25 Nov 2026, 07:59 UTC
+User confirmed the next work order: fix Hindi adherence, knowledge/answer quality, response time, and repeated Retry behavior BEFORE any further design changes. The user will provide the design changes later. Preserve the current Dashboard and Guest Login during this phase.
+
+### Checkpoint safety and source control
+- Repository: `lavsharma2910-dev/AJ-AI-Android`
+- Working branch: `feature/update-34-full-neon-design`
+- Checkpoint backup branch created from the last recorded feature-branch commit `1b9580fd62ca180731b25c272ae7b2274dcf318f`: `backup/update35-checkpoint-20261125-0759`.
+- This backup is a recovery point for the recorded commit; it does not claim to include changes made after that commit.
+- No design edits, Dashboard redesign, Guest Login removal, production Worker deployment, secrets changes, paid service, PR merge, or release are authorized by this checkpoint.
+
+### Ordered work plan
+1. **Hindi adherence:** Devanagari Hindi whenever requested; persist language preference across turns/app restart; explicit latest language request takes precedence.
+2. **Knowledge and answer quality:** improve context use, relevance, factual discipline, uncertainty handling, and truthful capability descriptions.
+3. **Current information:** add real retrieval only through a verified free/open-source path; until it is implemented and tested, clearly disclose that live news/scores cannot be verified.
+4. **Retry/message integrity:** remove contradictory failure bubbles, show truthful Pending/Sending/Failed/Completed states, reuse stable request IDs, prevent duplicate UI replies, and preserve message order across app restarts. Do not claim exactly-once delivery until server-side idempotency is implemented and deployed with approval.
+5. **Response time:** instrument Android and Worker stages, establish measured baseline, then optimize the demonstrated bottleneck. Do not guess or promise a latency target without measurements.
+6. **Quality verification:** automated tests, static analysis, CI/APK build, and a user-run device checklist. Record evidence; unrun tests remain NOT RUN.
+
+### Current implementation versus verification
+- Existing source changes: test-suite specification; extra stable-ID retry tests; Worker prompt rules for strict Hindi, context discipline, and no fabricated live-news claims.
+- Latest recorded feature-branch commit at checkpoint: `1b9580fd62ca180731b25c272ae7b2274dcf318f`.
+- No verified Update 35 CI run/APK for these latest changes yet.
+- No production Worker deployment; source prompt changes do not affect the currently deployed Worker or installed APK.
+- Android queue UI/lifecycle, persistent language preference, live retrieval, server-side idempotency, response-time instrumentation, full automated test run and device validation remain OPEN.
+- Build #77 is the temporary Guest Login APK, not a verified Update 35 quality APK.
+- User's latest confirmed acceptance order: quality and reliability first; design review only after those fixes, using the user's forthcoming design instructions.
