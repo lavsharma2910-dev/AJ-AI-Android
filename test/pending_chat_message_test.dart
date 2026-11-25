@@ -143,4 +143,41 @@ void main() {
     expect(retry.status, 'pending');
   });
 
+
+  test('failed request can be retried with the same stable identity', () {
+    final failed = PendingChatMessage(
+      id: 'stable-retry-id',
+      text: 'Retry this request',
+      createdAt: DateTime.utc(2026, 11, 24),
+      retryCount: 1,
+      status: 'failed',
+    );
+
+    final retry = failed.copyWith(status: 'pending');
+
+    expect(retry.id, failed.id);
+    expect(retry.text, failed.text);
+    expect(retry.retryCount, failed.retryCount);
+    expect(retry.status, 'pending');
+  });
+
+  test('status transition never replaces the stable request ID', () {
+    final initial = PendingChatMessage(
+      id: 'same-id-across-lifecycle',
+      text: 'Lifecycle test',
+      createdAt: DateTime.utc(2026, 11, 25),
+    );
+
+    final processing = initial.copyWith(status: 'processing');
+    final failed = processing.copyWith(status: 'failed', retryCount: 1);
+    final retried = failed.copyWith(status: 'pending');
+    final restored = PendingChatMessage.fromJson(retried.toJson());
+
+    expect(processing.id, initial.id);
+    expect(failed.id, initial.id);
+    expect(retried.id, initial.id);
+    expect(restored.id, initial.id);
+    expect(restored.status, 'pending');
+  });
+
 }
