@@ -115,3 +115,12 @@ No test is considered executed until evidence is added below.
 | P0 answer quality | NOT RUN | — |
 | P1 factual safety | NOT RUN | — |
 | P1 capability truthfulness | NOT RUN | — |
+
+
+## Implementation checkpoint — 25 Nov 2026
+- Added the deep test matrix above in commit `3bc2b36e8c58270f4cb2b56524224eb2cbcb0954`.
+- Extended `test/pending_chat_message_test.dart` to assert retry status transitions preserve the same request ID in commit `a8a5c8f7df29a5600ea491c3d7a9b3ebfbd89b06`.
+- Tightened the Worker system instructions for strict Devanagari Hindi, conversation-context discipline, direct answers, and explicit honesty about the absence of live-news retrieval in commit `44802ec9141ba992b54d90defc53ada163bb2003`.
+- These Worker changes are source-only. Production Worker has NOT been deployed; current live app behavior is unchanged by this source edit.
+- Automated tests and APK build have NOT yet been verified for these commits.
+- Persistent language setting, real web/news retrieval, UI-visible queue lifecycle, and server-side request idempotency remain pending.
