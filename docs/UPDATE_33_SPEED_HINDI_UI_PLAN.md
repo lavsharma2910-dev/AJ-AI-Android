@@ -79,3 +79,14 @@ The previously confirmed phone build (GitHub Actions build #18, artifact `142452
 - The old runner's private debug signing key is not present in the repository or either APK artifact. A new stable signing key would secure future builds but cannot recreate the old certificate.
 - Physical-device QA is **BLOCKED pending a safe install route**. Possible routes requiring user approval: a side-by-side test package with a distinct application ID (separate app data), or a user-approved export/backup process before a fresh install. A persistent signing keystore and GitHub Actions secret also require explicit user approval and only solve future upgrades.
 - No signing secrets were created or changed; no app uninstall, data deletion, PR merge, or production deployment was performed.
+
+## Repository audit — 25 Nov 2026
+
+- Requested base commit `9c358ce9bdee255dd2e8d25e080cc1d35a195f7c` was verified to exist. The working branch `feature/update-33-response-speed-hindi-quality` currently points to `49f8d285b66f7a129344d5edd5c1a3885657dacb`; GitHub comparison confirms the requested base is its merge base.
+- A recoverable pre-audit checkpoint was created and verified at `backup/update33-before-latency-privacy-20261125`, pointing to `49f8d285b66f7a129344d5edd5c1a3885657dacb`.
+- Privacy review of `lib/request_diagnostics.dart`: emitted client diagnostic fields are restricted to elapsed request milliseconds, HTTP status (or `none`), and one of four fixed outcome categories. No prompt, response, account ID, token, or PII is accepted by the metric API.
+- Privacy review of `backend/worker.js`: structured console events contain fixed event names, model identifier, success flag, HTTP status, duration milliseconds, and fallback boolean. They do not include request body, prompt, generated answer, API key, or user identifier. This is source inspection only; production logs were not accessed.
+- Existing tests in `test/request_diagnostics_test.dart` cover success, HTTP failure, pre-response/network failure, malformed/empty response classification, and idempotent finalization. The success test's exact output regex also guards against extra content fields.
+- Android debug metrics are guarded by `kDebugMode`; the Worker logs duration/outcome metadata on the server. No external analytics service is used.
+- Last verified CI for this branch: [Build #71](https://github.com/lavsharma2910-dev/AJ-AI-Android/actions/runs/45334026024) — PASS on commit `49f8d285b66f7a129344d5edd5c1a3885657dacb`.
+- This run made no application-source or Worker changes. No new CI run was triggered. Physical-device latency sampling (10 representative requests), backend log sampling, and end-to-end Hindi answer-quality verification remain NOT TESTED.
