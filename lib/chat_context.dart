@@ -46,7 +46,7 @@ List<Map<String, String>> buildReliableChatContext({
     } else if (type == 'aj' &&
         !value.startsWith('नमस्ते!') &&
         !value.startsWith('संदेश भेजा नहीं जा सका।') &&
-        !value.startsWith('Queue सेव नहीं हो पाई。') &&
+        !value.startsWith('Queue सेव नहीं हो पाई।') &&
         !(message['requestId'] != null &&
             pendingIds.contains(message['requestId']))) {
       context.add({'role': 'model', 'text': value});
