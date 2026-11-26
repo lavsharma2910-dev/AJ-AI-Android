@@ -93,3 +93,38 @@ bool insertAssistantReply(
   }
   return true;
 }
+
+/// Stores one retry notice per request, immediately after its user message.
+void upsertRequestFailureNotice(
+  List<Map<String, String>> messages, {
+  required String requestId,
+  required String text,
+}) {
+  if (requestId.trim().isEmpty || text.trim().isEmpty) return;
+  messages.removeWhere(
+    (item) => item['type'] == 'notice' && item['requestId'] == requestId,
+  );
+  final userIndex = messages.indexWhere(
+    (item) => item['type'] == 'user' && item['requestId'] == requestId,
+  );
+  final notice = <String, String>{
+    'type': 'notice',
+    'text': text,
+    'requestId': requestId,
+  };
+  if (userIndex < 0) {
+    messages.add(notice);
+  } else {
+    messages.insert(userIndex + 1, notice);
+  }
+}
+
+/// Removes a request's retry notice after its real assistant reply succeeds.
+void removeRequestFailureNotice(
+  List<Map<String, String>> messages,
+  String requestId,
+) {
+  messages.removeWhere(
+    (item) => item['type'] == 'notice' && item['requestId'] == requestId,
+  );
+}
