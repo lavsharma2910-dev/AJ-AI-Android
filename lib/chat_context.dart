@@ -76,6 +76,7 @@ bool insertAssistantReply(
   );
   if (alreadyAnswered) return false;
 
+  removeRequestFailureNotice(messages, requestId);
   final userIndex = messages.indexWhere(
     (item) => item['type'] == 'user' && item['requestId'] == requestId,
   );
