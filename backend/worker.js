@@ -129,13 +129,25 @@ export default {
       return response({ error: "Invalid JSON request" }, 400);
     }
 
+    const requestId = typeof body.requestId === "string" &&
+        /^[a-f0-9]{32}$/i.test(body.requestId)
+      ? body.requestId
+      : crypto.randomUUID();
+
     const message = typeof body.message === "string"
       ? body.message.trim()
       : "";
 
     if (!message || message.length > 6000) {
+      console.log(JSON.stringify({
+        event: "chat_rejected",
+        requestId,
+        reason: "invalid_message",
+        totalDurationMs: Date.now() - requestStartedAt
+      }));
       return response({
-        error: "Message is required (maximum 6000 characters)"
+        error: "Message is required (maximum 6000 characters)",
+        requestId
       }, 400);
     }
 
@@ -160,6 +172,14 @@ export default {
       }
     ];
 
+    // Correlate timings without logging prompts, chat history, or credentials.
+    console.log(JSON.stringify({
+      event: "chat_start",
+      requestId,
+      historyCount: history.length,
+      messageLength: message.length
+    }));
+
     // Try primary model, then backup model.
     for (const model of MODELS) {
       const result = await callGemini(
@@ -170,6 +190,7 @@ export default {
 
       console.log(JSON.stringify({
         event: "gemini_attempt",
+        requestId,
         model,
         success: result.ok,
         status: result.status || 200,
@@ -177,15 +198,21 @@ export default {
       }));
 
       if (result.ok) {
+        const totalDurationMs = Date.now() - requestStartedAt;
+        const fallbackUsed = model !== MODELS[0];
         console.log(JSON.stringify({
           event: "chat_complete",
-          totalDurationMs: Date.now() - requestStartedAt,
-          fallbackUsed: model !== MODELS[0]
+          requestId,
+          model: result.model,
+          totalDurationMs,
+          fallbackUsed
         }));
         return response({
           reply: result.answer,
           model: result.model,
-          fallbackUsed: model !== MODELS[0]
+          fallbackUsed,
+          requestId,
+          serverDurationMs: totalDurationMs
         });
       }
 
@@ -201,9 +228,17 @@ export default {
       }
     }
 
-    console.log(JSON.stringify({ event: "chat_failed", totalDurationMs: Date.now() - requestStartedAt }));
+    const totalDurationMs = Date.now() - requestStartedAt;
+    console.log(JSON.stringify({
+      event: "chat_failed",
+      requestId,
+      totalDurationMs
+    }));
     return response({
-      error: "Both AI models are temporarily unavailable. Please try again shortly."
+      error: "Both AI models are temporarily unavailable. Please try again shortly.",
+      requestId,
+      serverDurationMs: totalDurationMs,
+      retryable: true
     }, 503);
   }
 };
