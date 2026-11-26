@@ -90,3 +90,34 @@ The previously confirmed phone build (GitHub Actions build #18, artifact `142452
 - Android debug metrics are guarded by `kDebugMode`; the Worker logs duration/outcome metadata on the server. No external analytics service is used.
 - Last verified CI for this branch: [Build #71](https://github.com/lavsharma2910-dev/AJ-AI-Android/actions/runs/45334026024) — PASS on commit `49f8d285b66f7a129344d5edd5c1a3885657dacb`.
 - This run made no application-source or Worker changes. No new CI run was triggered. Physical-device latency sampling (10 representative requests), backend log sampling, and end-to-end Hindi answer-quality verification remain NOT TESTED.
+
+
+## Conversation reliability audit and fixes — 26 Nov 2026
+
+### Verified source findings
+- The backend prompt already requested Devanagari when Hindi is explicitly requested, but did not clearly state that this preference should persist across later short follow-ups when the user types Hinglish. This was a prompt-level instruction gap; model compliance still requires live response testing.
+- The Android chat queue can accept another message while a previous request is processing. User messages are appended immediately, while assistant replies were appended only after each request completed. When multiple prompts are queued quickly, an earlier answer can therefore appear after a later user prompt, making the transcript look out of order.
+- New chat messages previously had no stable request ID attached to their displayed transcript entry. This prevented reliable association of a delayed reply with its originating user message.
+- In saved-history restoration, the code parsed pending queue entries into a temporary list but cleared the active queue without adding the restored entries back. A restored conversation could therefore fail to resume pending work and could overwrite the saved state without those queued items.
+
+### Changes committed on the Update 33 branch
+- Backend prompt now treats an explicit Hindi/script choice as a persistent preference across follow-up turns, and says not to switch to English or Romanized Hindi merely because the user types Hinglish. This is an instruction improvement, not proof of model compliance.
+- Android now attaches the queue request ID to each new user message and preserves it through current and legacy history loading and saved-conversation restoration.
+- When a queued answer arrives, Android inserts it immediately after the matching user message. A duplicate assistant entry with the same request ID is not inserted again. Older messages without IDs retain an append-at-end compatibility fallback.
+- Saved-conversation restoration now rehydrates the pending queue from the parsed restored queue entries.
+
+### Checkpoints
+- Pre-audit checkpoint: `backup/update33-before-conversation-audit-20261126` (created from the working branch before the first 26 Nov code change; source blob comparisons matched).
+- After Hindi preference change: commit `68ca06a293821b3ddc7001ae6b7b987da7fcd32c`; checkpoint `backup/update33-after-hindi-preference-20261126` verified by matching Worker blob SHA.
+- Before transcript ordering change: `backup/update33-before-message-order-20261126` verified by matching Android source blob SHA.
+- After transcript ordering change: commit `bd2c0246019b0684229548d61bd6db6a1888f4bf`; checkpoint `backup/update33-after-message-order-20261126` verified by matching Android source blob SHA.
+- Before saved-history queue restoration fix: `backup/update33-before-history-queue-restore-20261126` verified by matching Android source blob SHA.
+- After saved-history queue restoration fix: commit `dfe9cff2eb45e5cc1c6e3ca0efd515354263e19b`; checkpoint `backup/update33-after-history-queue-restore-20261126` verified by matching Android source blob SHA.
+
+### Validation status
+- Source review of request-ID propagation, reply insertion, backwards-compatible history loading, and queue rehydration: **PASS (static review only)**.
+- GitHub compare from `68ca06a293821b3ddc7001ae6b7b987da7fcd32c` to `bd2c0246019b0684229548d61bd6db6a1888f4bf`: **PASS**, one focused Android source commit.
+- Flutter analyze, automated test suite, CI/APK build for the latest 26 Nov commits: **NOT VERIFIED in this audit**.
+- Live Hindi model behavior, duplicate-response reproduction, rapid multi-send ordering, pending-queue restore after app restart, and physical-device regression: **NOT TESTED**.
+- Live News/search capability remains unsupported by the inspected Worker; no search provider or paid service was added.
+- No production Worker deployment, PR merge, release, signing-secret change, or production data change was performed.
