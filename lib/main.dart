@@ -1240,10 +1240,11 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!mounted) break;
           if (persistenceFailed) break;
           setState(() {
-            messages.add({
-              'type': 'aj',
-              'text': 'संदेश भेजा नहीं जा सका। Queue में सुरक्षित है। Retry बाद में करें।\n\n$e',
-            });
+            upsertRequestFailureNotice(
+              messages,
+              requestId: queuedMessage.id,
+              text: 'संदेश नहीं भेजा जा सका। Queue सुरक्षित है। Retry करें।\n\n$e',
+            );
           });
           await saveChatState();
           break;
