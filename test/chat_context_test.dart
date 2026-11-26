@@ -69,6 +69,25 @@ void main() {
       expect(result.last['role'], 'model');
     });
 
+    test('filters queue persistence failure notices from model context', () {
+      final messages = <Map<String, String>>[
+        {'type': 'user', 'text': 'hello', 'requestId': 'hello-1'},
+        {'type': 'aj', 'text': 'Queue सेव नहीं हो पाई।'},
+        {'type': 'aj', 'text': 'valid answer'},
+      ];
+
+      expect(
+        buildReliableChatContext(
+          messages: messages,
+          pendingQueue: const [],
+        ),
+        [
+          {'role': 'user', 'text': 'hello'},
+          {'role': 'model', 'text': 'valid answer'},
+        ],
+      );
+    });
+
     test('filters welcome and failed-send notices from model context', () {
       final messages = <Map<String, String>>[
         {'type': 'aj', 'text': 'नमस्ते! मैं AJ हूँ।'},
