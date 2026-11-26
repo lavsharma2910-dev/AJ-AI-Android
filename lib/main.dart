@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'package:aj_ai/pending_chat_message.dart';
+import 'package:aj_ai/chat_context.dart';
 import 'package:aj_ai/request_diagnostics.dart';
 import 'dart:convert';
 
@@ -682,49 +683,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> messages = [];
 
   List<Map<String, String>> buildChatContext() {
-    final pendingCounts = <String, int>{};
-    for (final item in pendingQueue) {
-      pendingCounts[item.text] = (pendingCounts[item.text] ?? 0) + 1;
-    }
-
-    final completed = List<Map<String, String>>.from(messages);
-
-    for (var i = completed.length - 1; i >= 0; i--) {
-      final item = completed[i];
-      if (item["type"] == "user") {
-        final value = item["text"] ?? "";
-        final count = pendingCounts[value] ?? 0;
-        if (count > 0) {
-          completed.removeAt(i);
-          pendingCounts[value] = count - 1;
-        }
-      }
-    }
-
-    final context = <Map<String, String>>[];
-    for (final item in completed) {
-      final type = item["type"];
-      final value = (item["text"] ?? "").trim();
-      if (value.isEmpty) continue;
-
-      if (type == "user") {
-        context.add({"role": "user", "text": value});
-      } else if (type == "aj" &&
-          !value.startsWith("नमस्ते!") &&
-          !value.startsWith("संदेश भेजा नहीं जा सका।") &&
-          !value.startsWith("Queue सेव नहीं हो पाई।")) {
-        context.add({"role": "model", "text": value});
-      }
-    }
-
-    final recent = context.length <= 12
-        ? List<Map<String, String>>.from(context)
-        : context.sublist(context.length - 12);
-
-    while (recent.isNotEmpty && recent.first["role"] != "user") {
-      recent.removeAt(0);
-    }
-    return recent;
+    return buildReliableChatContext(
+      messages: messages,
+      pendingQueue: pendingQueue,
+    );
   }
 
   @override
@@ -1194,26 +1156,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _insertAssistantMessageForRequest(String requestId, String text) {
-    final alreadyAnswered = messages.any(
-      (item) => item['type'] == 'aj' && item['requestId'] == requestId,
+    insertAssistantReply(
+      messages,
+      requestId: requestId,
+      text: text,
     );
-    if (alreadyAnswered) return;
-
-    final userIndex = messages.indexWhere(
-      (item) => item['type'] == 'user' && item['requestId'] == requestId,
-    );
-    final assistantMessage = <String, String>{
-      'type': 'aj',
-      'text': text,
-      'requestId': requestId,
-    };
-
-    if (userIndex >= 0) {
-      messages.insert(userIndex + 1, assistantMessage);
-    } else {
-      // Backward compatibility for messages saved before request IDs existed.
-      messages.add(assistantMessage);
-    }
   }
 
   Future<void> processQueue() async {
