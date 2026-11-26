@@ -121,3 +121,36 @@ The previously confirmed phone build (GitHub Actions build #18, artifact `142452
 - Live Hindi model behavior, duplicate-response reproduction, rapid multi-send ordering, pending-queue restore after app restart, and physical-device regression: **NOT TESTED**.
 - Live News/search capability remains unsupported by the inspected Worker; no search provider or paid service was added.
 - No production Worker deployment, PR merge, release, signing-secret change, or production data change was performed.
+
+
+## Reliability hardening — 26 Nov 2026 (continued)
+
+### Additional implementation
+- Added `lib/chat_context.dart` as a pure, separately testable layer for conversation-context construction, request-ID-based pending-message exclusion, reply insertion, duplicate-reply protection, and per-request retry notices.
+- Android chat now delegates its model-history construction and assistant-reply insertion to that helper instead of keeping the logic embedded in the screen widget.
+- Context filtering now uses stable request IDs for modern messages, with a text-count compatibility fallback only for legacy messages that have no request ID. This prevents an identical completed question from being removed just because another identical question is still pending.
+- Reply insertion is tested against out-of-order completion: even if a later response arrives first, each answer is placed beside its own originating question.
+- Failed network attempts now maintain one retry notice per request. Repeated retries replace the same notice, and a successful answer removes it. These notices are excluded from the model's conversation context.
+- Added 13 focused regression tests in `test/chat_context_test.dart`: pending-vs-completed identical text, legacy fallback, bounded context, greeting/error filtering, exact reply association, out-of-order completion, duplicate suppression, invalid input, retry-notice replacement, request isolation, and notice cleanup on success.
+
+### New commits and checkpoints
+- Added helper and initial tests: commit `966a0cc17939f13205f8b67cc7192f574dc2c87b` (helper), then `97a2a91d32a724cbd674b11a92cf515dfe2dc6b0` (tests); post-change backup `backup/after-reliability-helpers-20261126-0815`.
+- Wired helper into Android chat: commit `5276f182c1a315f5725cec827ae9fd4374477b98`; post-change backup `backup/after-reliability-wiring-20261126-0816`.
+- Added retry-notice deduplication and cleanup: commit `ea7ae9030725b1b3f294f1c57e7adb2732254af6`; post-change backup `backup/after-retry-notice-fix-20261126-0820`.
+- Added explicit out-of-order response regression coverage: commit `a54db6689f355697917c9438d93f934ff4321481`; post-change backup `backup/after-out-of-order-test-20261126-0821`.
+- Every post-change backup was created from the exact resulting commit. GitHub compare confirmed the latest post-retry backup and working branch were identical before the later test-only commit; the latest out-of-order backup is based on the latest test commit.
+
+### Validation status
+- GitHub source-file fetch and blob checks: **PASS** for the committed helper, Android integration, and tests.
+- Static reasoning/review of request-ID matching, legacy fallback, reply association, and retry-notice lifecycle: **REVIEWED; not a substitute for execution**.
+- Automated Flutter test run: **NOT YET VERIFIED**. The 13 new tests have been committed but have not been executed in this session.
+- Flutter analyze, release APK build, and physical-device regression: **NOT TESTED** for these commits.
+- Latest commit combined status endpoint returned no status entries. The workflow-run connector only exposes pull-request-triggered runs, so it did not establish whether the push-triggered APK workflow has completed. Do not infer PASS from the absence of a reported failure.
+- Backend Worker remains unchanged since the prior Hindi prompt update. No Cloudflare deployment, paid provider, new API credential, PR merge, signing change, or release was performed.
+
+### Remaining blockers before design work
+- Verify the GitHub Actions Flutter analyze/test/APK build for the latest commit and inspect exact logs.
+- Resolve the previously documented APK signing-certificate mismatch safely before installing a new build over the existing app. Do not uninstall the existing app or risk local chat data.
+- Device-test Devanagari persistence, rapid multi-message queueing, retry recovery, app restart with pending messages, and at least 10 response-time samples.
+- Live market/news research is still unsupported by the current Worker. Do not label stale model knowledge as live. Any search provider integration must first meet the zero-cost policy and be reviewed before credentials or external services are introduced.
+- Keep premium UI work paused until these core reliability gates are measured and accepted.
