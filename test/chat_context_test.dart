@@ -172,4 +172,70 @@ void main() {
       expect(messages, isEmpty);
     });
   });
+  group('request failure notices', () {
+    test('replaces repeated retry notices instead of duplicating them', () {
+      final messages = <Map<String, String>>[
+        {'type': 'user', 'text': 'question', 'requestId': 'r1'},
+      ];
+
+      upsertRequestFailureNotice(
+        messages,
+        requestId: 'r1',
+        text: 'Network unavailable',
+      );
+      upsertRequestFailureNotice(
+        messages,
+        requestId: 'r1',
+        text: 'Still offline',
+      );
+
+      expect(messages, hasLength(2));
+      expect(messages[1]['type'], 'notice');
+      expect(messages[1]['text'], 'Still offline');
+      expect(messages[1]['requestId'], 'r1');
+    });
+
+    test('successful reply removes its retry notice', () {
+      final messages = <Map<String, String>>[
+        {'type': 'user', 'text': 'question', 'requestId': 'r1'},
+      ];
+      upsertRequestFailureNotice(
+        messages,
+        requestId: 'r1',
+        text: 'Network unavailable',
+      );
+
+      expect(
+        insertAssistantReply(messages, requestId: 'r1', text: 'real answer'),
+        isTrue,
+      );
+      expect(messages.map((item) => item['type']).toList(), ['user', 'aj']);
+      expect(messages.last['text'], 'real answer');
+    });
+
+    test('does not remove another request failure notice', () {
+      final messages = <Map<String, String>>[
+        {'type': 'user', 'text': 'first', 'requestId': 'r1'},
+        {'type': 'user', 'text': 'second', 'requestId': 'r2'},
+      ];
+      upsertRequestFailureNotice(
+        messages,
+        requestId: 'r1',
+        text: 'first failed',
+      );
+      upsertRequestFailureNotice(
+        messages,
+        requestId: 'r2',
+        text: 'second failed',
+      );
+
+      removeRequestFailureNotice(messages, 'r1');
+
+      expect(
+        messages.where((item) => item['type'] == 'notice').map((item) => item['requestId']),
+        ['r2'],
+      );
+    });
+  });
+
 }
