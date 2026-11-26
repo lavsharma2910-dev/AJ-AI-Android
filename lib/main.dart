@@ -757,6 +757,8 @@ class _ChatScreenState extends State<ChatScreen> {
           messages.add({
             'type': item['type'] as String,
             'text': item['text'] as String,
+            if (item['requestId'] is String)
+              'requestId': item['requestId'] as String,
           });
         }
 
@@ -787,6 +789,8 @@ class _ChatScreenState extends State<ChatScreen> {
             messages.add({
               'type': item['type'].toString(),
               'text': item['text'].toString(),
+              if (item['requestId'] is String)
+                'requestId': item['requestId'].toString(),
             });
           }
         }
@@ -1059,7 +1063,12 @@ class _ChatScreenState extends State<ChatScreen> {
       final restoredQueue = <PendingChatMessage>[];
       for (final item in (state['messages'] as List? ?? [])) {
         if (item is Map && item['type'] is String && item['text'] is String) {
-          restoredMessages.add({'type': item['type'], 'text': item['text']});
+          restoredMessages.add({
+            'type': item['type'],
+            'text': item['text'],
+            if (item['requestId'] is String)
+              'requestId': item['requestId'] as String,
+          });
         }
       }
       for (final item in (state['pendingQueue'] as List? ?? [])) {
@@ -1182,6 +1191,29 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _insertAssistantMessageForRequest(String requestId, String text) {
+    final alreadyAnswered = messages.any(
+      (item) => item['type'] == 'aj' && item['requestId'] == requestId,
+    );
+    if (alreadyAnswered) return;
+
+    final userIndex = messages.indexWhere(
+      (item) => item['type'] == 'user' && item['requestId'] == requestId,
+    );
+    final assistantMessage = <String, String>{
+      'type': 'aj',
+      'text': text,
+      'requestId': requestId,
+    };
+
+    if (userIndex >= 0) {
+      messages.insert(userIndex + 1, assistantMessage);
+    } else {
+      // Backward compatibility for messages saved before request IDs existed.
+      messages.add(assistantMessage);
+    }
+  }
+
   Future<void> processQueue() async {
     if (!queueRestoreSafe || !historyLoaded || queueProcessing || !mounted) {
       return;
@@ -1234,7 +1266,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
           setState(() {
             pendingQueue.removeWhere((item) => item.id == queuedMessage.id);
-            messages.add({'type': 'aj', 'text': answer.toString()});
+            _insertAssistantMessageForRequest(
+              queuedMessage.id,
+              answer.toString(),
+            );
           });
 
           if (!await saveChatState()) {
@@ -1441,11 +1476,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final oldMessages = List<Map<String, String>>.from(messages);
     final oldQueue = List<PendingChatMessage>.from(pendingQueue);
 
+    final requestId = createRequestId();
     sendSaving = true;
     setState(() {
-      messages.add({'type': 'user', 'text': value});
+      messages.add({
+        'type': 'user',
+        'text': value,
+        'requestId': requestId,
+      });
       pendingQueue.add(PendingChatMessage(
-        id: createRequestId(),
+        id: requestId,
         text: value,
         createdAt: DateTime.now().toUtc(),
       ));
