@@ -130,6 +130,27 @@ void main() {
       );
     });
 
+    test('keeps transcript order when replies complete out of order', () {
+      final messages = <Map<String, String>>[
+        {'type': 'user', 'text': 'first question', 'requestId': 'r1'},
+        {'type': 'user', 'text': 'second question', 'requestId': 'r2'},
+      ];
+
+      // Simulate the later request returning before the earlier request.
+      insertAssistantReply(messages, requestId: 'r2', text: 'second answer');
+      insertAssistantReply(messages, requestId: 'r1', text: 'first answer');
+
+      expect(
+        messages.map((item) => item['text']).toList(),
+        [
+          'first question',
+          'first answer',
+          'second question',
+          'second answer',
+        ],
+      );
+    });
+
     test('does not add a duplicate reply for the same request ID', () {
       final messages = <Map<String, String>>[
         {'type': 'user', 'text': 'question', 'requestId': 'r1'},
