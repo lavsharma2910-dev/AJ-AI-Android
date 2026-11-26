@@ -154,3 +154,35 @@ The previously confirmed phone build (GitHub Actions build #18, artifact `142452
 - Device-test Devanagari persistence, rapid multi-message queueing, retry recovery, app restart with pending messages, and at least 10 response-time samples.
 - Live market/news research is still unsupported by the current Worker. Do not label stale model knowledge as live. Any search provider integration must first meet the zero-cost policy and be reviewed before credentials or external services are introduced.
 - Keep premium UI work paused until these core reliability gates are measured and accepted.
+
+
+## CI verification and latency observability — 26 Nov 2026
+
+### Verified CI result for reliability module
+- GitHub Actions run **#101**, run ID `45782195582`, commit `59956e13fead8e36841dfec34e38004e2c9b3f57`: **success**.
+- Flutter Analyze command completed successfully with `--fatal-warnings --no-fatal-infos`; it reported 23 info-level deprecation/style notices (not fatal warnings).
+- Flutter automated tests: **29 passed**, including all 13 new `chat_context_test.dart` regression tests.
+- Release APK build: **success**, APK output reported as 51.1 MB.
+- Artifact `AJ-AI-APK`, ID `15098468386`, ZIP size 24,117,375 bytes, SHA-256 `bb1217ba6163ea75b765cb6ddf3d4b901de9b6f9d221ddc762f33314ca3556ff`.
+- Artifact link: https://github.com/lavsharma2910-dev/AJ-AI-Android/actions/runs/45782195582/artifacts/15098468386
+- This CI run was for commit `59956e13...`, before the subsequent backend telemetry and workflow syntax-check commits. It does not validate those later changes.
+
+### Backend latency telemetry added (not deployed)
+- Cloudflare Worker now accepts a validated 32-character request ID from the Android client, or generates a UUID when absent/invalid.
+- Structured logs correlate `chat_start`, each `gemini_attempt`, `chat_complete`, `chat_failed`, and invalid-message rejection using that request ID.
+- Logs include history count, message length, model name, HTTP status, per-model duration, total server duration, and fallback usage. Prompt text, conversation history, and API credentials are deliberately not logged.
+- Successful Worker responses now include `requestId` and `serverDurationMs`; terminal temporary-unavailability responses include those fields plus `retryable: true`.
+- No Cloudflare deployment was performed. Production behavior remains unchanged until the user explicitly approves deployment.
+
+### CI hardening
+- Added a GitHub Actions step using `node --input-type=module --check < backend/worker.js` so future builds validate Worker module syntax in addition to Flutter analysis, tests, and APK build.
+- Pre-change backup: `backup/before-worker-syntax-ci-20261126-0827`.
+- Post-change backup: `backup/after-worker-syntax-ci-20261126-0827`.
+- Worker telemetry pre-change backup: `backup/before-worker-request-telemetry-20261126-0825`.
+- Worker telemetry post-change backup: `backup/after-worker-request-telemetry-20261126-0826`.
+
+### Remaining validation and safety gates
+- Wait for the new CI run after commits `a2153386...` and `757e16fa...`; verify Worker syntax-check, Flutter analyze, all tests, and APK build.
+- Compare the new APK signing certificate against the previous installed APK before asking the user to install over the existing app. The current workflow generates Android files fresh on each CI run and does not configure a stable release keystore, so do not assume update-compatible signing.
+- Device tests remain necessary for Devanagari preference persistence, queue/retry recovery, rapid submissions, saved-history restoration, and real response-time samples.
+- Backend telemetry only becomes available in production Cloudflare logs after an approved deployment. Do not deploy automatically.
