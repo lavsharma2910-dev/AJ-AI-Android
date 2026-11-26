@@ -1081,7 +1081,9 @@ class _ChatScreenState extends State<ChatScreen> {
         messages
           ..clear()
           ..addAll(restoredMessages);
-        pendingQueue.clear();
+        pendingQueue
+          ..clear()
+          ..addAll(restoredQueue);
         selectionMode = false;
         selectedMessages.clear();
       });
