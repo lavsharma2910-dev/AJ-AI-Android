@@ -141,7 +141,7 @@ export default {
       ? body.message.trim()
       : "";
 
-    if (!message || message.length > 6000) {
+    if (!message || message.length > 20000) {
       console.log(JSON.stringify({
         event: "chat_rejected",
         requestId,
@@ -149,7 +149,7 @@ export default {
         totalDurationMs: Date.now() - requestStartedAt
       }));
       return response({
-        error: "Message is required (maximum 6000 characters)",
+        error: "Message is required (maximum 20000 characters)",
         requestId
       }, 400);
     }
