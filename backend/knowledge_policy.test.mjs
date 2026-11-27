@@ -66,3 +66,31 @@ test("combined guard applies both freshness and high-impact rules", () => {
   assert.match(instruction, /Freshness guard:/);
   assert.match(instruction, /High-impact guard:/);
 });
+
+test("flags monetization and earnings claims as high impact", () => {
+  assert.equal(classifyKnowledgeNeed("How much can I earn from this platform?").highImpact, true);
+  assert.equal(classifyKnowledgeNeed("What commission will I receive?").highImpact, true);
+  assert.equal(classifyKnowledgeNeed("क्या इससे कितनी कमाई होगी?").highImpact, true);
+  assert.equal(classifyKnowledgeNeed("कितना कमीशन मिलेगा?").highImpact, true);
+});
+
+test("flags commercial-use claims as high impact", () => {
+  assert.equal(
+    classifyKnowledgeNeed("Is this image allowed for commercial use?").highImpact,
+    true
+  );
+});
+
+test("combines freshness and financial risk for current earning claims", () => {
+  assert.deepEqual(classifyKnowledgeNeed("What are the latest creator payouts in 2026?"), {
+    requiresFreshVerification: true,
+    highImpact: true
+  });
+});
+
+test("does not flag ordinary stable educational questions as high impact", () => {
+  assert.deepEqual(classifyKnowledgeNeed("Explain how photosynthesis works."), {
+    requiresFreshVerification: false,
+    highImpact: false
+  });
+});
