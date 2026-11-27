@@ -1601,9 +1601,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       final messageText = item['text'] ?? '';
                       final isSelected = selectedMessages.contains(index);
 
-                      return GestureDetector(
-                        onLongPress: () => toggleMessageSelection(index),
-                        child: Align(
+                      return Align(
                         alignment: isUser
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
@@ -1657,7 +1655,6 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-                      ),
                     );
                     },
                   ),
@@ -1696,7 +1693,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: controller,
                       enabled: historyLoaded && !sendSaving && !restoreFailed,
-                      onSubmitted: (_) => send(),
+                      minLines: 1,
+                      maxLines: 6,
+                      maxLength: 20000,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      textCapitalization: TextCapitalization.sentences,
+                      scrollPhysics: const BouncingScrollPhysics(),
                       decoration: InputDecoration(
                         hintText: 'AJ को संदेश लिखें...',
                         filled: true,
@@ -1706,7 +1710,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           vertical: 14,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
+                          borderRadius: BorderRadius.circular(22),
                           borderSide: BorderSide.none,
                         ),
                       ),
