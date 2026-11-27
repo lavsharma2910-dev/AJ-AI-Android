@@ -99,6 +99,8 @@ jobs:
 
       - name: Validate Cloudflare Worker JavaScript syntax
         run: node --input-type=module --check < backend/worker.js
+      - name: Run backend knowledge policy tests
+        run: node --test backend/knowledge_policy.test.mjs
 
       - name: Analyze Flutter code
         run: flutter analyze --fatal-warnings --no-fatal-infos
