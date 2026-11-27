@@ -1,4 +1,6 @@
 
+import { classifyKnowledgeNeed, buildKnowledgePolicyInstruction } from "./knowledge_policy.mjs";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -18,7 +20,7 @@ const MODELS = [
   "gemini-3.5-flash-lite"
 ];
 
-async function callGemini(model, contents, apiKey) {
+async function callGemini(model, contents, apiKey, policyInstruction) {
   const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
@@ -44,8 +46,9 @@ async function callGemini(model, contents, apiKey) {
                 "For time-sensitive or current facts, state when you cannot verify live information. Never present stale knowledge or a guess as current fact. If essential context is missing, ask one concise clarification instead of guessing.",
                 "For calculations, show the key inputs and result; recheck arithmetic. For complex requests, organize the answer into clear steps. For simple questions, keep the answer short.",
                 "If you do not know or the available context is insufficient, say so plainly and explain what information is missing. Never pretend to have searched, tested, executed, or verified something you did not.",
-                "Be respectful, safe, practical, and transparent about uncertainty. Avoid overconfident financial, medical, legal, or safety claims."
-              ].join(" ")
+                "Be respectful, safe, practical, and transparent about uncertainty. Avoid overconfident financial, medical, legal, or safety claims.",
+                policyInstruction
+              ].filter(Boolean).join(" ")
             }]
           },
           contents,
@@ -151,6 +154,9 @@ export default {
       }, 400);
     }
 
+    const knowledgeClassification = classifyKnowledgeNeed(message);
+    const knowledgePolicy = buildKnowledgePolicyInstruction(knowledgeClassification);
+
     const history = Array.isArray(body.history)
       ? body.history.slice(-12)
           .filter(item =>
@@ -185,7 +191,8 @@ export default {
       const result = await callGemini(
         model,
         contents,
-        env.GEMINI_API_KEY
+        env.GEMINI_API_KEY,
+        knowledgePolicy
       );
 
       console.log(JSON.stringify({
