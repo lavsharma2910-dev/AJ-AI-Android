@@ -4,7 +4,7 @@ const FRESHNESS_PATTERN =
   /\b(today|tonight|yesterday|latest|current|currently|right now|as of now|recent|this week|this month|this year|20\d{2})\b|आज|अभी|वर्तमान|ताज़ा|ताजा|नवीनतम|इस सप्ताह|इस महीने|इस साल|फिलहाल|आजकल/iu;
 
 const HIGH_IMPACT_PATTERN =
-  /\b(legal|law|lawsuit|court|police|copyright|trademark|patent|licen[cs]e|contract|tax|gst|income tax|loan|investment|invest|stock|share market|crypto|insurance|interest rate|earning|earnings|income|revenue|profit|monetization|monetize|commission|payout|royalty|commercial use|medical|medicine|medication|diagnosis|symptom|dosage|dose|treatment|emergency|safety|chemical|pesticide)\b|कानून|कानूनी|अदालत|पुलिस|कॉपीराइट|ट्रेडमार्क|पेटेंट|लाइसेंस|अनुबंध|टैक्स|कर|जीएसटी|लोन|कर्ज|निवेश|शेयर|क्रिप्टो|बीमा|ब्याज|कमाई|आय|मुनाफा|राजस्व|कमीशन|रॉयल्टी|भुगतान|चिकित्सा|दवा|इलाज|खुराक|लक्षण|निदान|आपातकाल|सुरक्षा|रसायन|कीटनाशक/iu;
+  /\b(legal|law|lawsuit|court|police|copyright|trademark|patent|licen[cs]e|contract|tax|gst|income tax|loan|investment|invest|stock|share market|crypto|insurance|interest rate|earn|earning|earnings|income|revenue|profit|monetization|monetize|commission|payouts?|royalty|commercial use|medical|medicine|medication|diagnosis|symptom|dosage|dose|treatment|emergency|safety|chemical|pesticide)\b|कानून|कानूनी|अदालत|पुलिस|कॉपीराइट|ट्रेडमार्क|पेटेंट|लाइसेंस|अनुबंध|टैक्स|कर|जीएसटी|लोन|कर्ज|निवेश|शेयर|क्रिप्टो|बीमा|ब्याज|कमाई|आय|मुनाफा|राजस्व|कमीशन|रॉयल्टी|भुगतान|चिकित्सा|दवा|इलाज|खुराक|लक्षण|निदान|आपातकाल|सुरक्षा|रसायन|कीटनाशक/iu;
 
 export function classifyKnowledgeNeed(message) {
   const text = typeof message === "string" ? message : "";
