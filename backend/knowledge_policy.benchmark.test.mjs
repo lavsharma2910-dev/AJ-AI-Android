@@ -106,7 +106,7 @@ test("high-impact English matching is case-insensitive", () => {
 });
 
 test("unrelated words containing freshness fragments are not treated as freshness terms", () => {
-  expected("The latestest concept is a fictional word.", true, false);
+  expected("The latestest concept is a fictional word.", false, false);
 });
 
 test("ordinary Hindi educational question is not flagged", () => {
